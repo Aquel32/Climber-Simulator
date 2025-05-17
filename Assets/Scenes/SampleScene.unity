@@ -491,41 +491,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1675710ee2bcf51478b6d320be539c48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 100
-  height: 100
+  mapWidth: 200
+  mapHeight: 200
   scale: 0
-  factor: 0.3
+  factor: 20
+  seed: 0
   meshFilter: {fileID: 427356532}
-  gradient:
-    serializedVersion: 2
-    key0: {r: 0, g: 0, b: 0, a: 1}
-    key1: {r: 1, g: 1, b: 1, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 0}
-    key3: {r: 0, g: 0, b: 0, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 0
-    ctime3: 0
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: -1
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2
+  regions:
+  - name: snow
+    height: 2
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - name: rock
+    height: 0.8
+    color: {r: 0.10746165, g: 0.115403265, b: 0.14716971, a: 1}
+  - name: grass
+    height: 0.7
+    color: {r: 0.021729128, g: 0.2905661, b: 0.0060306103, a: 1}
+  - name: sand
+    height: 0.55
+    color: {r: 0.78867924, g: 0.75648844, b: 0.623503, a: 1}
+  - name: water
+    height: 0.5
+    color: {r: 0, g: 0.18838449, b: 0.93962264, a: 1}
 --- !u!4 &808152298
 Transform:
   m_ObjectHideFlags: 0
