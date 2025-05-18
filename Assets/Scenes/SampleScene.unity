@@ -581,6 +581,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1405732111
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1405732112}
+  m_Layer: 0
+  m_Name: Path
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1405732112
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1405732111}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1468650683
 GameObject:
   m_ObjectHideFlags: 0
@@ -719,15 +750,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5dbb6e25007b5f47830b7393a97dd66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapWidth: 100
-  mapHeight: 100
+  mapWidth: 300
+  mapHeight: 300
   mapDepth: 50
-  scale: 3
-  seed: 1
-  octaves: 4
+  scale: 1.59
+  seed: 25
+  octaves: 5
   persistence: 0.5
   lacunarity: 2
   terrain: {fileID: 1468650685}
+  grassScale: 0.3
+  snowScale: 1.7
+  pathParent: {fileID: 1405732112}
+  pathElementPrefab: {fileID: 2537828710863052438, guid: e3cc88363439db84a92bbdaa4262befa, type: 3}
+  pathMaxSteepness: 90
+  fa: -4.15
+  fb: 0.22
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -737,3 +775,4 @@ SceneRoots:
   - {fileID: 832575519}
   - {fileID: 808152298}
   - {fileID: 2053431783}
+  - {fileID: 1405732112}

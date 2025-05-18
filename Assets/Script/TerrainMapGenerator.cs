@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -26,7 +27,10 @@ public class TerrainMapGenerator : MonoBehaviour
     public float grassScale = 0.4f;  // Reduce grass influence to 40%
     public float snowScale = 1.6f;   // Increase snow influence to 160%
 
-    public Vector3 heighestPoint;
+    public Transform pathParent;
+    public GameObject pathElementPrefab;
+
+    public float pathMaxSteepness = 90f;
 
     void Start()
     {
@@ -52,6 +56,20 @@ public class TerrainMapGenerator : MonoBehaviour
         terrainData.SetHeights(0, 0, GenerateHeightMap());
 
         ApplyTextures();
+
+        foreach(Transform child in pathParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        List<Vector3> path = FindPathFromCenterToHighestPoint();
+        if(path != null)
+        {
+            foreach(Vector3 point in path)
+            {
+                Instantiate(pathElementPrefab, point, Quaternion.identity, pathParent);
+            }
+        }
     }
 
     void ApplyTextures()
@@ -124,14 +142,6 @@ public class TerrainMapGenerator : MonoBehaviour
                 float falloffValue = GetFalloffValue(x, y);
 
                 heights[x, y] = baseHeight * falloffValue;  // Apply falloff here
-
-                if(heighestPoint != null)
-                {
-                    if (heights[x,y] > heighestPoint.y)
-                    {
-                        heighestPoint = new Vector3(x, heights[x, y], y);
-                    }
-                }
             }
         }
 
@@ -177,8 +187,8 @@ public class TerrainMapGenerator : MonoBehaviour
     float GetFalloffValue(int x, int y)
     {
         // Normalize x and y to range [-1, 1]
-        float nx = (float)x / (mapWidth - 1) * 2f - 1f;
-        float ny = (float)y / (mapHeight - 1) * 2f - 1f;
+        float nx = (float)x / (terrain.terrainData.heightmapResolution - 1) * 2f - 1f;
+        float ny = (float)y / (terrain.terrainData.heightmapResolution - 1) * 2f - 1f;
 
         // Calculate Euclidean distance from center (0,0)
 
@@ -195,8 +205,8 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float GetNormalizedDistanceFromCenter(int x, int y)
     {
-        float centerX = (mapWidth - 1) / 2f;
-        float centerY = (mapHeight - 1) / 2f;
+        float centerX = (terrain.terrainData.heightmapResolution - 1) / 2f;
+        float centerY = (terrain.terrainData.heightmapResolution - 1) / 2f;
 
         float dx = x - centerX;
         float dy = y - centerY;
@@ -208,10 +218,139 @@ public class TerrainMapGenerator : MonoBehaviour
         return distance / maxDistance;  // 0 at center, 1 at furthest corner
     }
 
+    public Vector3 FindHighestPoint()
+    {
+        TerrainData terrainData = terrain.terrainData;
+        int resolution = terrainData.heightmapResolution;
+
+        // Get all heights
+        float[,] heights = terrainData.GetHeights(0, 0, resolution, resolution);
+
+        float maxHeight = float.MinValue;
+        int maxX = 0, maxY = 0;
+
+        // Loop through heightmap array
+        for (int y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++)
+            {
+                if (heights[y, x] > maxHeight)
+                {
+                    maxHeight = heights[y, x];
+                    maxX = x;
+                    maxY = y;
+                }
+            }
+        }
+
+        // Convert heightmap coordinates to world position
+        float terrainHeight = maxHeight * terrainData.size.y;
+
+        // Calculate position on terrain in world units
+        float posX = ((float)maxX / (resolution - 1)) * terrainData.size.x;
+        float posZ = ((float)maxY / (resolution - 1)) * terrainData.size.z;
+
+        // Terrain position in world space (bottom-left corner)
+        Vector3 terrainPos = terrain.transform.position;
+
+        Vector3 highestPoint = new Vector3(
+            terrainPos.x + posX,
+            terrainPos.y + terrainHeight,
+            terrainPos.z + posZ
+        );
+
+        return highestPoint;
+    }
+    bool[,] GenerateWalkableGrid()
+    {
+        TerrainData terrainData = terrain.terrainData;
+        int resolution = terrainData.heightmapResolution;
+        bool[,] walkableGrid = new bool[resolution, resolution];
+
+        for (int y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++)
+            {
+                float x_01 = (float)x / (resolution - 1);
+                float y_01 = (float)y / (resolution - 1);
+                float steepness = terrainData.GetSteepness(x_01, y_01);
+
+                walkableGrid[x, y] = steepness <= pathMaxSteepness;
+            }
+        }
+
+        return walkableGrid;
+    }
+
+
+
+    List<Vector3> FindPathFromCenterToHighestPoint()
+    {
+        TerrainData terrainData = terrain.terrainData;
+        int resolution = terrainData.heightmapResolution;
+
+        Vector2Int start = new Vector2Int(resolution / 2, resolution / 2);
+
+
+        int maxX = 0, maxY = 0;
+        float maxHeight = float.MinValue;
+        float[,] heights = terrainData.GetHeights(0, 0, resolution, resolution);
+        for (int y = 0; y < resolution; y++)
+        {
+            for (int x = 0; x < resolution; x++)
+            {
+                if (heights[y, x] > maxHeight)
+                {
+                    maxHeight = heights[y, x];
+                    maxX = x;
+                    maxY = y;
+                }
+            }
+        }
+        Vector2Int target = new Vector2Int(maxX, maxY);
+
+        bool[,] walkableGrid = GenerateWalkableGrid();
+
+        Pathfinding pathfinder = new Pathfinding(walkableGrid);
+
+        List<Vector2Int> path = pathfinder.FindPath(start, target);
+
+        if (path != null)
+        {
+            // Convert grid path to world coordinates, for example:
+            List<Vector3> worldPath = new List<Vector3>();
+            for (int i = 0; i < path.Count; i++)
+            {
+                float x_01 = (float)path[i].x / (resolution - 1);
+                float y_01 = (float)path[i].y / (resolution - 1);
+                float heightAtPoint = terrainData.GetInterpolatedHeight(x_01, y_01);
+
+                Vector3 pos = new Vector3(
+                    terrain.transform.position.x + x_01 * terrainData.size.x,
+                    terrain.transform.position.y + heightAtPoint,
+                    terrain.transform.position.z + y_01 * terrainData.size.z
+                );
+
+                worldPath.Add(pos);
+            }
+
+            return worldPath;
+
+            // You can now use this worldPath for AI movement, debug draw, etc.
+        }
+        else
+        {
+            Debug.LogWarning("No path found!");
+            return null;
+        }
+    }
     public void OnValidate()
     {
         if (octaves <= 0) octaves = 1;
-
+        if (!EditorApplication.isPlaying)
+        {
+            return;
+        }
         random = new System.Random(seed);
         Generate();
     }
