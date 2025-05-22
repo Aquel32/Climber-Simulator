@@ -1,11 +1,18 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
-using UnityEngine.UIElements;
+using UnityEngine.LightTransport;
 
 public class TerrainMapGenerator : MonoBehaviour
 {
+    private System.Random random;
+
     [Header("Settings")]
     [SerializeField] private int mapWidth;
     [SerializeField] private int mapHeight;
@@ -18,30 +25,66 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private float persistence = 0.5f;
     [SerializeField] private float lacunarity = 2.0f;
 
+    [Header("Falloff")]
+    [SerializeField] private float falloffDistancePower = 3f;
+    [SerializeField] private float falloffScale = 2.2f;
+
     [Header("Rendering")]
     [SerializeField] private Terrain terrain;
+    private TerrainData terrainData;
+    [SerializeField] private Material walkMaterial, climbMaterial, unableMaterial;
 
-    private System.Random random;
+    [Header("Pathfinding")]
+    [SerializeField] private Transform topIndicator;
+    [SerializeField] private Transform pathParent;
+    [SerializeField] private Transform pathPartPrefab;
+    [SerializeField] private float maxWalkableSteepness;
+    [SerializeField] private float maxClimbableSteepness;
 
-    // Scale factors for tweaking
-    public float grassScale = 0.4f;  // Reduce grass influence to 40%
-    public float snowScale = 1.6f;   // Increase snow influence to 160%
-
-    public Transform pathParent;
-    public GameObject pathElementPrefab;
-
-    public float pathMaxSteepness = 90f;
+    float[,] heightMap;
+    float[,] steepnessMap;
+    Vector2Int[] path;
 
     void Start()
     {
-        random = new System.Random(seed);
-
-        Generate();
+        //InitializeMap();
     }
 
-    public void Generate()
+    void InitializeMap()
     {
-        TerrainData terrainData = terrain.terrainData;
+        random = new System.Random(seed);
+
+
+        Generate();
+
+        if (!EditorApplication.isPlaying) return;
+        path = FindPath();
+
+        foreach(Transform child in pathParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        for(int i = 0; i < path.Length; i++)
+        {
+            Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(path[i]), Quaternion.identity, pathParent);
+            obj.name = path[i].ToString();
+
+            if (steepnessMap[path[i].x, path[i].y] < maxWalkableSteepness)
+            {
+                obj.GetComponent<MeshRenderer>().material = walkMaterial;
+            }
+            else if (steepnessMap[path[i].x, path[i].y] < maxClimbableSteepness)
+            {
+                obj.GetComponent<MeshRenderer>().material = climbMaterial;
+            }
+        }
+    }
+
+    #region Terrain Generator
+    void Generate()
+    {
+        terrainData = terrain.terrainData;
 
         terrain.terrainData.terrainLayers = new TerrainLayer[]
         {
@@ -53,33 +96,23 @@ public class TerrainMapGenerator : MonoBehaviour
 
         terrainData.heightmapResolution = mapWidth + 1;
         terrainData.size = new Vector3(mapWidth, mapDepth, mapHeight);
-        terrainData.SetHeights(0, 0, GenerateHeightMap());
+
+        heightMap = GenerateHeightMap();
+        terrainData.SetHeights(0, 0, heightMap);
+        steepnessMap = GenerateSteepnessMap();
 
         ApplyTextures();
-
-        foreach(Transform child in pathParent)
-        {
-            Destroy(child.gameObject);
-        }
-
-        List<Vector3> path = FindPathFromCenterToHighestPoint();
-        if(path != null)
-        {
-            foreach(Vector3 point in path)
-            {
-                Instantiate(pathElementPrefab, point, Quaternion.identity, pathParent);
-            }
-        }
     }
+
 
     void ApplyTextures()
     {
         TerrainData terrainData = terrain.terrainData;
         float[,,] splatmapData = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, terrainData.alphamapLayers];
 
-        for (int y = 0; y < terrainData.alphamapHeight; y++)
+        for (int x = 0; x < terrainData.alphamapWidth; x++)
         {
-            for (int x = 0; x < terrainData.alphamapWidth; x++)
+            for (int y = 0; y < terrainData.alphamapHeight; y++)
             {
                 float x_01 = (float)x / terrainData.alphamapWidth;
                 float y_01 = (float)y / terrainData.alphamapHeight;
@@ -94,26 +127,16 @@ public class TerrainMapGenerator : MonoBehaviour
 
                 float[] splatWeights = new float[terrainData.alphamapLayers];
 
-                
-
-                // Grass: flat and low, reduced
-                float grassWeight = Mathf.Clamp01(flatness * (1f - normalizedHeight)) * grassScale;
-
-                // Gravel: steep and low, keep unchanged
+                float grassWeight = Mathf.Clamp01(flatness * (1f - normalizedHeight)) * 0.3f;
                 float gravelWeight = Mathf.Clamp01((1f - flatness) * (1f - normalizedHeight));
-
-                // Rock: steep and high, keep unchanged
                 float rockWeight = Mathf.Clamp01((1f - flatness) * normalizedHeight);
-
-                // Snow: high and facing north, increased
-                float snowWeight = Mathf.Clamp01(normalizedHeight * Mathf.Clamp01(normal.z)) * snowScale;
+                float snowWeight = Mathf.Clamp01(normalizedHeight * Mathf.Clamp01(normal.z)) * 1.7f;
 
                 splatWeights[0] = grassWeight;
                 splatWeights[1] = gravelWeight;
                 splatWeights[2] = rockWeight;
                 splatWeights[3] = snowWeight;
 
-                // Normalize weights so they sum to 1
                 float total = splatWeights.Sum();
                 if (total == 0f) total = 1f;
 
@@ -129,26 +152,43 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float[,] GenerateHeightMap()
     {
-        float[,] heights = new float[terrain.terrainData.heightmapResolution, terrain.terrainData.heightmapResolution];
+        float[,] heights = new float[terrainData.heightmapResolution, terrainData.heightmapResolution];
 
-        float offsetX = random.Next(-10000, 10000);
-        float offsetY = random.Next(-10000, 10000);
+        int offsetX = random.Next(-10000, 10000);
+        int offsetY = random.Next(-10000, 10000);
 
-        for (int x = 0; x < terrain.terrainData.heightmapResolution; x++)
+        for (int x = 0; x < terrainData.heightmapResolution; x++)
         {
-            for (int y = 0; y < terrain.terrainData.heightmapResolution; y++)
+            for (int y = 0; y < terrainData.heightmapResolution; y++)
             {
-                float baseHeight = RidgedPerlinNoise(x, y, offsetX, offsetY);
-                float falloffValue = GetFalloffValue(x, y);
-
-                heights[x, y] = baseHeight * falloffValue;  // Apply falloff here
+                heights[x, y] = GenerateHeightAtPoint(x, y, offsetX, offsetY);
             }
         }
 
         return heights;
     }
 
-    public float RidgedPerlinNoise(float x, float y, float offsetX, float offsetY)
+    float[,] GenerateSteepnessMap()
+    {
+        float[,] steepnesses = new float[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        for (int x = 0; x < terrainData.heightmapResolution; x++)
+        {
+            for (int y = 0; y < terrainData.heightmapResolution; y++)
+            {
+                float xCoord = (float)x / (terrainData.heightmapResolution - 1);
+                float yCoord = (float)y / (terrainData.heightmapResolution - 1);
+                steepnesses[x, y] = terrain.terrainData.GetSteepness(xCoord, yCoord);
+            }
+        }
+        return steepnesses;
+    }
+
+    float GenerateHeightAtPoint(int x, int y, int offsetX, int offsetY)
+    {
+        return RidgedPerlinNoise(x, y, offsetX, offsetY) * GetFalloffValue(x,y);
+    }
+
+    float RidgedPerlinNoise(float x, float y, float offsetX, float offsetY)
     {
         float total = 0f;
         float frequency = 1f;
@@ -157,16 +197,12 @@ public class TerrainMapGenerator : MonoBehaviour
 
         for (int i = 0; i < octaves; i++)
         {
-            // Sample Perlin noise in [0,1]
-            float xCoord = ((float)x / mapWidth * scale + offsetX) * frequency;
-            float yCoord = ((float)y / mapHeight * scale + offsetY) * frequency;
+            float xCoord = ((float)x / terrainData.heightmapResolution * scale + offsetX) * frequency;
+            float yCoord = ((float)y / terrainData.heightmapResolution * scale + offsetY) * frequency;
             float perlinValue = Mathf.PerlinNoise(xCoord, yCoord);
 
-            // Convert Perlin noise to ridged noise:
-            // Peaks near 1, valleys near 0
             float ridgedValue = 1f - Mathf.Abs(2f * perlinValue - 1f);
 
-            // Square to sharpen ridges (optional but common)
             ridgedValue *= ridgedValue;
 
             total += ridgedValue * amplitude;
@@ -177,30 +213,21 @@ public class TerrainMapGenerator : MonoBehaviour
             frequency *= lacunarity;
         }
 
-        // Normalize result to [0,1]
         return total / maxAmplitude;
     }
 
-    public float fa = 3f;
-    public float fb = 2.2f;
-
     float GetFalloffValue(int x, int y)
     {
-        // Normalize x and y to range [-1, 1]
-        float nx = (float)x / (terrain.terrainData.heightmapResolution - 1) * 2f - 1f;
-        float ny = (float)y / (terrain.terrainData.heightmapResolution - 1) * 2f - 1f;
-
-        // Calculate Euclidean distance from center (0,0)
+        float nx = (float)x / (terrainData.heightmapResolution - 1) * 2f - 1f;
+        float ny = (float)y / (terrainData.heightmapResolution - 1) * 2f - 1f;
 
         float distance = GetNormalizedDistanceFromCenter(x, y);
 
-        // Clamp distance to [0,1], where 0 is center, 1 or more is edge or outside circle
         distance = Mathf.Clamp01(distance);
 
-        // Smooth falloff curve using the same formula for softness
-        float falloff = Mathf.Pow(distance, fa) / (Mathf.Pow(distance, fa) + Mathf.Pow(fb - fb * distance, fa));
+        float falloff = Mathf.Pow(distance, falloffDistancePower) / (Mathf.Pow(distance, falloffDistancePower) + Mathf.Pow(falloffScale - falloffScale * distance, falloffDistancePower));
 
-        return Mathf.Clamp01(1f - falloff);  // 1 in center, 0 near edges
+        return Mathf.Clamp01(1f - falloff);
     }
 
     float GetNormalizedDistanceFromCenter(int x, int y)
@@ -215,143 +242,243 @@ public class TerrainMapGenerator : MonoBehaviour
 
         float maxDistance = Mathf.Sqrt(centerX * centerX + centerY * centerY);
 
-        return distance / maxDistance;  // 0 at center, 1 at furthest corner
+        return distance / maxDistance;
     }
 
-    public Vector3 FindHighestPoint()
+    #endregion
+
+    #region Pathfinding
+
+    Vector2Int[] FindPath()
     {
-        TerrainData terrainData = terrain.terrainData;
-        int resolution = terrainData.heightmapResolution;
+        Vector2Int end = new Vector2Int(terrainData.heightmapResolution / 2, terrainData.heightmapResolution / 2);
+        Vector2Int start = FindHighestPeak();
 
-        // Get all heights
-        float[,] heights = terrainData.GetHeights(0, 0, resolution, resolution);
+        topIndicator.position = ConvertPointToWorldPosition(end);
 
-        float maxHeight = float.MinValue;
-        int maxX = 0, maxY = 0;
+        Vector2Int[] path = BFS(start, end);
 
-        // Loop through heightmap array
-        for (int y = 0; y < resolution; y++)
+        return path;
+    }
+
+    Vector2Int[] directions =
         {
-            for (int x = 0; x < resolution; x++)
+            new Vector2Int(0,1),
+            new Vector2Int(0,-1),
+            new Vector2Int(1,0),
+            new Vector2Int(-1,0),
+
+            new Vector2Int(-1,-1),
+            new Vector2Int(1,1),
+            new Vector2Int(-1,-1),
+            new Vector2Int(1,-1),
+        };
+
+
+    bool[,] visited;
+    Vector2Int[,] before;
+    Vector2Int[] BFS(Vector2Int start, Vector2Int end)
+    {
+        visited = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        before = new Vector2Int[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+
+        queue.Enqueue(start);
+        visited[start.x, start.y] = true;
+        before[start.x, start.y] = start;
+
+        Vector2Int lastKnown = start;
+
+        try
+        {
+
+        while (queue.Count > 0)
+        {
+            Vector2Int point = queue.Dequeue();
+            lastKnown = point;
+            print(before[point.x, point.y].x + " " + before[point.x, point.y].y + " --> " + point.x + " " + point.y + " | s = " + steepnessMap[point.x, point.y]);
+
+            if (point == end)
             {
-                if (heights[y, x] > maxHeight)
+                print("backtracking from " + point.x + " " + point.y + " to " + start.x + " " + start.y);
+                return Backtrack(start, point);
+            }
+
+            if (steepnessMap[point.x, point.y] > maxWalkableSteepness && steepnessMap[point.x, point.y] <= maxClimbableSteepness)
+            {
+                //SZUKAJ NAJBLIZSZEGO CHODZENIA
+
+                //na indeksie zero poczatek, na ostatnim chodznie
+                Vector2Int[] PathToClosestWalk = PathToClosestWalking(point);
+                if (PathToClosestWalk.Length > 0)
                 {
-                    maxHeight = heights[y, x];
-                    maxX = x;
-                    maxY = y;
+                    queue.Clear();
+                    print("CLEARING");
+                    queue.Enqueue(PathToClosestWalk[PathToClosestWalk.Length - 1]);
+                    continue;
+                }
+            }
+
+            int aggg = 0;
+            int visi = 0;
+
+            //PIORYTET W DODAWANIU DO KOLEJKI DLA CHODZENIA
+            for (int i = 0; i < directions.Length; i++)
+            {
+               Vector2Int newPoint = point + directions[i];
+
+               if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
+               {
+                    aggg++;
+                    continue;
+               }
+
+                if (steepnessMap[newPoint.x, newPoint.y] > maxClimbableSteepness) { aggg++; continue; }
+
+                if (visited[newPoint.x, newPoint.y] == false)
+                {
+                    visited[newPoint.x, newPoint.y] = true;
+                    before[newPoint.x, newPoint.y] = point;
+
+                    queue.Enqueue(point + directions[i]);
+                }
+                else
+                {
+                    visi++;
+                    aggg++;
+                }
+            }
+
+            if(aggg == 4)
+            {
+                print("CZTERY " + visi.ToString() + " " + queue.Count);
+            }
+        }
+
+        }
+        catch(Exception e)
+        {
+            print(e.Message);
+        }
+
+        return Backtrack(start, lastKnown);
+    }
+
+    Vector2Int[] PathToClosestWalking(Vector2Int start)
+    {
+        bool[,] localVisited = visited.Clone() as bool[,];
+       
+        List <Vector2Int> path = new List<Vector2Int>();
+
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+        print("looking for walking from " + start.x + ", " + start.y);
+
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            Vector2Int point = queue.Dequeue();
+
+            if (steepnessMap[point.x, point.y] < maxWalkableSteepness)
+            {
+                print("found walking at " + point.x + " " + point.y);
+                return Backtrack(start, point);
+            }
+
+            //PIORYTET DLA SCHODZENIA NIZEJ SZUKAJAC CHODZENIA
+            for (int i = 0; i < directions.Length; i++)
+            {
+                Vector2Int newPoint = point + directions[i];
+
+                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
+                {
+                    continue;
+                }
+
+                if (steepnessMap[newPoint.x, newPoint.y] > maxClimbableSteepness) { continue; }
+
+                if (visited[newPoint.x, newPoint.y] == false)
+                {
+                    visited[newPoint.x, newPoint.y] = true;
+                    before[newPoint.x, newPoint.y] = point;
+
+                    queue.Enqueue(point + directions[i]);
+                }
+            }
+        }
+        
+
+        return path.ToArray();
+    }
+
+    Vector2Int[] Backtrack(Vector2Int start, Vector2Int end)
+    {
+        List<Vector2Int> path = new List<Vector2Int>();
+        Vector2Int currentPoint = end;
+
+        path.Add(end);
+        currentPoint = before[currentPoint.x, currentPoint.y];
+
+        do
+        {
+            path.Add(currentPoint);
+            currentPoint = before[currentPoint.x, currentPoint.y];
+        }
+        while (currentPoint != start);
+
+
+        path.Reverse();
+        return path.ToArray();
+    }
+
+    Vector2Int FindHighestPeak()
+    {
+        float maxVal = -1;
+
+        List<Vector2Int> peaks = new List<Vector2Int>();
+
+        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        {
+            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            {
+                if (heightMap[x, y] >= maxVal)
+                {
+                    maxVal = heightMap[x, y];
+
+                    peaks.Clear();
+                }
+
+                if (heightMap[x,y]  == maxVal)
+                {
+                    peaks.Add(new Vector2Int(y,x));
                 }
             }
         }
 
-        // Convert heightmap coordinates to world position
-        float terrainHeight = maxHeight * terrainData.size.y;
+        if (peaks.Count == 0) return new Vector2Int(0,0);
 
-        // Calculate position on terrain in world units
-        float posX = ((float)maxX / (resolution - 1)) * terrainData.size.x;
-        float posZ = ((float)maxY / (resolution - 1)) * terrainData.size.z;
+        return peaks[random.Next(0, peaks.Count)];
+    }
 
-        // Terrain position in world space (bottom-left corner)
-        Vector3 terrainPos = terrain.transform.position;
+    Vector3 ConvertPointToWorldPosition(Vector2Int point)
+    {
+        float xCoord = (float)point.x / (terrainData.heightmapResolution - 1);
+        float yCoord = (float)point.y / (terrainData.heightmapResolution - 1);
 
-        Vector3 highestPoint = new Vector3(
-            terrainPos.x + posX,
-            terrainPos.y + terrainHeight,
-            terrainPos.z + posZ
+        return new Vector3(
+            terrain.transform.position.x + xCoord * terrainData.size.x,
+            terrain.transform.position.y + terrain.terrainData.GetInterpolatedHeight(xCoord, yCoord),
+            terrain.transform.position.z + yCoord * terrainData.size.z
         );
-
-        return highestPoint;
-    }
-    bool[,] GenerateWalkableGrid()
-    {
-        TerrainData terrainData = terrain.terrainData;
-        int resolution = terrainData.heightmapResolution;
-        bool[,] walkableGrid = new bool[resolution, resolution];
-
-        for (int y = 0; y < resolution; y++)
-        {
-            for (int x = 0; x < resolution; x++)
-            {
-                float x_01 = (float)x / (resolution - 1);
-                float y_01 = (float)y / (resolution - 1);
-                float steepness = terrainData.GetSteepness(x_01, y_01);
-
-                walkableGrid[x, y] = steepness <= pathMaxSteepness;
-            }
-        }
-
-        return walkableGrid;
     }
 
 
+    #endregion
 
-    List<Vector3> FindPathFromCenterToHighestPoint()
-    {
-        TerrainData terrainData = terrain.terrainData;
-        int resolution = terrainData.heightmapResolution;
-
-        Vector2Int start = new Vector2Int(resolution / 2, resolution / 2);
-
-
-        int maxX = 0, maxY = 0;
-        float maxHeight = float.MinValue;
-        float[,] heights = terrainData.GetHeights(0, 0, resolution, resolution);
-        for (int y = 0; y < resolution; y++)
-        {
-            for (int x = 0; x < resolution; x++)
-            {
-                if (heights[y, x] > maxHeight)
-                {
-                    maxHeight = heights[y, x];
-                    maxX = x;
-                    maxY = y;
-                }
-            }
-        }
-        Vector2Int target = new Vector2Int(maxX, maxY);
-
-        bool[,] walkableGrid = GenerateWalkableGrid();
-
-        Pathfinding pathfinder = new Pathfinding(walkableGrid);
-
-        List<Vector2Int> path = pathfinder.FindPath(start, target);
-
-        if (path != null)
-        {
-            // Convert grid path to world coordinates, for example:
-            List<Vector3> worldPath = new List<Vector3>();
-            for (int i = 0; i < path.Count; i++)
-            {
-                float x_01 = (float)path[i].x / (resolution - 1);
-                float y_01 = (float)path[i].y / (resolution - 1);
-                float heightAtPoint = terrainData.GetInterpolatedHeight(x_01, y_01);
-
-                Vector3 pos = new Vector3(
-                    terrain.transform.position.x + x_01 * terrainData.size.x,
-                    terrain.transform.position.y + heightAtPoint,
-                    terrain.transform.position.z + y_01 * terrainData.size.z
-                );
-
-                worldPath.Add(pos);
-            }
-
-            return worldPath;
-
-            // You can now use this worldPath for AI movement, debug draw, etc.
-        }
-        else
-        {
-            Debug.LogWarning("No path found!");
-            return null;
-        }
-    }
     public void OnValidate()
     {
         if (octaves <= 0) octaves = 1;
-        if (!EditorApplication.isPlaying)
-        {
-            return;
-        }
-        random = new System.Random(seed);
-        Generate();
+        
+        InitializeMap();
     }
 }
