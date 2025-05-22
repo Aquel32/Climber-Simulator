@@ -788,6 +788,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2053431783}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1852912820
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1852912821}
+  m_Layer: 0
+  m_Name: Debug Draw Parent
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1852912821
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1852912820}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2053431782
 GameObject:
   m_ObjectHideFlags: 0
@@ -847,11 +878,14 @@ MonoBehaviour:
   walkMaterial: {fileID: 2100000, guid: a3d67784a139ca64f94bbbc2e64c2c56, type: 2}
   climbMaterial: {fileID: 2100000, guid: 0820d9afb212481408ffe53cfa8990bf, type: 2}
   unableMaterial: {fileID: 2100000, guid: b2b2dd58435da3740986100e91a7170e, type: 2}
+  maxWalkableSteepness: 30
+  maxClimbableSteepness: 50
+  debug_drawMap: 1
+  debug_drawPath: 1
   topIndicator: {fileID: 297339820}
   pathParent: {fileID: 1405732112}
   pathPartPrefab: {fileID: 5351944805029872459, guid: e3cc88363439db84a92bbdaa4262befa, type: 3}
-  maxWalkableSteepness: 30
-  maxClimbableSteepness: 50
+  debugParent: {fileID: 1852912821}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -863,3 +897,4 @@ SceneRoots:
   - {fileID: 2053431783}
   - {fileID: 297339820}
   - {fileID: 1405732112}
+  - {fileID: 1852912821}

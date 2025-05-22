@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.LightTransport;
+using static UnityEditor.ShaderData;
 
 public class TerrainMapGenerator : MonoBehaviour
 {
@@ -35,11 +36,18 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private Material walkMaterial, climbMaterial, unableMaterial;
 
     [Header("Pathfinding")]
+    
+    [SerializeField] private float maxWalkableSteepness;
+    [SerializeField] private float maxClimbableSteepness;
+
+    [Header("Debug")]
+    [SerializeField] private bool debug_drawMap;
+    [SerializeField] private bool debug_drawPath;
+
     [SerializeField] private Transform topIndicator;
     [SerializeField] private Transform pathParent;
     [SerializeField] private Transform pathPartPrefab;
-    [SerializeField] private float maxWalkableSteepness;
-    [SerializeField] private float maxClimbableSteepness;
+    [SerializeField] private Transform debugParent;
 
     float[,] heightMap;
     float[,] steepnessMap;
@@ -53,32 +61,15 @@ public class TerrainMapGenerator : MonoBehaviour
     void InitializeMap()
     {
         random = new System.Random(seed);
-
-
         Generate();
 
         if (!EditorApplication.isPlaying) return;
+
         path = FindPath();
 
-        foreach(Transform child in pathParent)
-        {
-            Destroy(child.gameObject);
-        }
-
-        for(int i = 0; i < path.Length; i++)
-        {
-            Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(path[i]), Quaternion.identity, pathParent);
-            obj.name = path[i].ToString();
-
-            if (steepnessMap[path[i].x, path[i].y] < maxWalkableSteepness)
-            {
-                obj.GetComponent<MeshRenderer>().material = walkMaterial;
-            }
-            else if (steepnessMap[path[i].x, path[i].y] < maxClimbableSteepness)
-            {
-                obj.GetComponent<MeshRenderer>().material = climbMaterial;
-            }
-        }
+        ClearParents();
+        if (debug_drawMap) DebugDraw();
+        if (debug_drawPath) DrawPath();
     }
 
     #region Terrain Generator
@@ -323,6 +314,7 @@ public class TerrainMapGenerator : MonoBehaviour
             int visi = 0;
 
             //PIORYTET W DODAWANIU DO KOLEJKI DLA CHODZENIA
+            //najpierw dodawac chodzenia
             for (int i = 0; i < directions.Length; i++)
             {
                Vector2Int newPoint = point + directions[i];
@@ -386,6 +378,7 @@ public class TerrainMapGenerator : MonoBehaviour
             }
 
             //PIORYTET DLA SCHODZENIA NIZEJ SZUKAJAC CHODZENIA
+            //najpierw dodawac te ktore schodza jak najnizej
             for (int i = 0; i < directions.Length; i++)
             {
                 Vector2Int newPoint = point + directions[i];
@@ -472,6 +465,62 @@ public class TerrainMapGenerator : MonoBehaviour
         );
     }
 
+    public void DebugDraw()
+    {
+        
+
+        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        {
+            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            {
+                Vector2Int point = new Vector2Int(x, y);
+
+                Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, debugParent);
+                obj.name = point.ToString() + " | " + steepnessMap[x,y];
+
+                if (steepnessMap[x, y] < maxWalkableSteepness)
+                {
+                    obj.GetComponent<MeshRenderer>().material = walkMaterial;
+                }
+                else if (steepnessMap[x, y] < maxClimbableSteepness)
+                {
+                    obj.GetComponent<MeshRenderer>().material = climbMaterial;
+                }
+            }
+        }
+    }
+
+    public void DrawPath()
+    {
+        for (int i = 0; i < path.Length; i++)
+        {
+            Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(path[i]), Quaternion.identity, pathParent);
+            obj.name = path[i].ToString();
+            obj.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+
+            if (steepnessMap[path[i].x, path[i].y] < maxWalkableSteepness)
+            {
+                obj.GetComponent<MeshRenderer>().material = walkMaterial;
+            }
+            else if (steepnessMap[path[i].x, path[i].y] < maxClimbableSteepness)
+            {
+                obj.GetComponent<MeshRenderer>().material = climbMaterial;
+            }
+        }
+    }
+
+    public void ClearParents()
+    {
+        foreach (Transform child in pathParent)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (Transform child in debugParent)
+        {
+            Destroy(child.gameObject);
+        }
+    }
 
     #endregion
 
