@@ -873,7 +873,7 @@ MonoBehaviour:
   persistence: 0.5
   lacunarity: 2
   falloffDistancePower: -2.5
-  falloffScale: 0.3
+  falloffScale: 0.2
   terrain: {fileID: 1468650685}
   walkMaterial: {fileID: 2100000, guid: a3d67784a139ca64f94bbbc2e64c2c56, type: 2}
   climbMaterial: {fileID: 2100000, guid: 0820d9afb212481408ffe53cfa8990bf, type: 2}

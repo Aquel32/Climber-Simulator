@@ -243,6 +243,7 @@ public class TerrainMapGenerator : MonoBehaviour
     Vector2Int[] FindPath()
     {
         Vector2Int end = new Vector2Int(terrainData.heightmapResolution / 2, terrainData.heightmapResolution / 2);
+        //end = new Vector2Int(92, 22);
         Vector2Int start = FindHighestPeak();
 
         topIndicator.position = ConvertPointToWorldPosition(end);
@@ -280,9 +281,6 @@ public class TerrainMapGenerator : MonoBehaviour
 
         Vector2Int lastKnown = start;
 
-        try
-        {
-
         while (queue.Count > 0)
         {
             Vector2Int point = queue.Dequeue();
@@ -303,8 +301,8 @@ public class TerrainMapGenerator : MonoBehaviour
                 Vector2Int[] PathToClosestWalk = PathToClosestWalking(point);
                 if (PathToClosestWalk.Length > 0)
                 {
-                    queue.Clear();
-                    print("CLEARING");
+                    //queue.Clear();
+                    print("FOUND PATH TO CLOSEST WALK");
                     queue.Enqueue(PathToClosestWalk[PathToClosestWalk.Length - 1]);
                     continue;
                 }
@@ -325,7 +323,7 @@ public class TerrainMapGenerator : MonoBehaviour
                     continue;
                }
 
-                if (steepnessMap[newPoint.x, newPoint.y] > maxClimbableSteepness) { aggg++; continue; }
+               if (steepnessMap[newPoint.x, newPoint.y] > maxClimbableSteepness) { aggg++; continue; }
 
                 if (visited[newPoint.x, newPoint.y] == false)
                 {
@@ -347,19 +345,12 @@ public class TerrainMapGenerator : MonoBehaviour
             }
         }
 
-        }
-        catch(Exception e)
-        {
-            print(e.Message);
-        }
 
         return Backtrack(start, lastKnown);
     }
 
     Vector2Int[] PathToClosestWalking(Vector2Int start)
     {
-        bool[,] localVisited = visited.Clone() as bool[,];
-       
         List <Vector2Int> path = new List<Vector2Int>();
 
         Queue<Vector2Int> queue = new Queue<Vector2Int>();
@@ -407,21 +398,35 @@ public class TerrainMapGenerator : MonoBehaviour
     Vector2Int[] Backtrack(Vector2Int start, Vector2Int end)
     {
         List<Vector2Int> path = new List<Vector2Int>();
+        int b = 0;
+        try
+        {
+
+
         Vector2Int currentPoint = end;
 
         path.Add(end);
         currentPoint = before[currentPoint.x, currentPoint.y];
+            Vector2Int lastPoint = currentPoint;
 
         do
         {
             path.Add(currentPoint);
+            lastPoint = currentPoint;
             currentPoint = before[currentPoint.x, currentPoint.y];
         }
-        while (currentPoint != start);
-
+        while (currentPoint != lastPoint);
 
         path.Reverse();
+
+        }
+        catch (Exception e)
+        {
+            print(path.Count);
+            print(b);
+        }
         return path.ToArray();
+
     }
 
     Vector2Int FindHighestPeak()
