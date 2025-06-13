@@ -878,8 +878,11 @@ MonoBehaviour:
   walkMaterial: {fileID: 2100000, guid: a3d67784a139ca64f94bbbc2e64c2c56, type: 2}
   climbMaterial: {fileID: 2100000, guid: 0820d9afb212481408ffe53cfa8990bf, type: 2}
   unableMaterial: {fileID: 2100000, guid: b2b2dd58435da3740986100e91a7170e, type: 2}
-  maxWalkableSteepness: 30
-  maxClimbableSteepness: 50
+  maxWalkableSteepness: 0.25
+  maxClimbableSteepness: 0.5
+  piorityDistancePrimary: 294
+  piorityDistanceSecondary: 88
+  piorityDistanceTetriary: 38
   debug_drawMap: 1
   debug_drawPath: 1
   topIndicator: {fileID: 297339820}
