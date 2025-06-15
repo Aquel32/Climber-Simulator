@@ -707,7 +707,7 @@ GameObject:
   - component: {fileID: 1468650685}
   - component: {fileID: 1468650684}
   m_Layer: 0
-  m_Name: Terrain
+  m_Name: Main Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -864,12 +864,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5dbb6e25007b5f47830b7393a97dd66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapWidth: 128
-  mapHeight: 128
-  mapDepth: 30
+  mapWidth: 1024
+  mapHeight: 1024
+  mapDepth: 220
   scale: 1.59
   seed: 52
-  octaves: 4
+  octaves: 6
   persistence: 0.5
   lacunarity: 2
   falloffDistancePower: -2.5
@@ -880,10 +880,10 @@ MonoBehaviour:
   unableMaterial: {fileID: 2100000, guid: b2b2dd58435da3740986100e91a7170e, type: 2}
   maxWalkableSteepness: 0.25
   maxClimbableSteepness: 0.5
-  piorityDistancePrimary: 294
-  piorityDistanceSecondary: 88
-  piorityDistanceTetriary: 38
-  debug_drawMap: 1
+  piorityDistancePrimary: 100
+  piorityDistanceSecondary: 515
+  piorityDistanceTetriary: 180
+  debug_drawMap: 0
   debug_drawPath: 1
   topIndicator: {fileID: 297339820}
   pathParent: {fileID: 1405732112}

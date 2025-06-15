@@ -40,9 +40,9 @@ public class TerrainMapGenerator : MonoBehaviour
     
     [SerializeField] private float maxWalkableSteepness;
     [SerializeField] private float maxClimbableSteepness;
-    [SerializeField,Range(10,1000)] private int piorityDistancePrimary = 100;
-    [SerializeField,Range(10,1000)] private int piorityDistanceSecondary = 100;
-    [SerializeField,Range(10,1000)] private int piorityDistanceTetriary = 100;
+    [SerializeField,Range(0,1000)] private int piorityDistancePrimary = 100;
+    [SerializeField,Range(0 ,1000)] private int piorityDistanceSecondary = 100;
+    [SerializeField,Range(0,1000)] private int piorityDistanceTetriary = 100;
 
     [Header("Debug")]
     [SerializeField] private bool debug_drawMap;
@@ -54,8 +54,19 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private Transform debugParent;
 
     float[,] heightMap;
-    float[,] steepnessMap;
-    Vector2Int[] path;
+
+    Vector2Int[] directions =
+    {
+            new Vector2Int(0,1),
+            new Vector2Int(0,-1),
+            new Vector2Int(1,0),
+            new Vector2Int(-1,0),
+
+            new Vector2Int(-1,-1),
+            new Vector2Int(1,1),
+            new Vector2Int(-1,-1),
+            new Vector2Int(1,-1),
+    };
 
     void Start()
     {
@@ -70,8 +81,6 @@ public class TerrainMapGenerator : MonoBehaviour
         if (!EditorApplication.isPlaying) return;
 
         FindPath();
-
-        
     }
 
     #region Terrain Generator
@@ -92,7 +101,6 @@ public class TerrainMapGenerator : MonoBehaviour
 
         heightMap = GenerateHeightMap();
         terrainData.SetHeights(0, 0, heightMap);
-        steepnessMap = GenerateSteepnessMap();
 
         ApplyTextures();
     }
@@ -159,21 +167,6 @@ public class TerrainMapGenerator : MonoBehaviour
         }
 
         return heights;
-    }
-
-    float[,] GenerateSteepnessMap()
-    {
-        float[,] steepnesses = new float[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        for (int x = 0; x < terrainData.heightmapResolution; x++)
-        {
-            for (int y = 0; y < terrainData.heightmapResolution; y++)
-            {
-                float xCoord = (float)x / (terrainData.heightmapResolution - 1);
-                float yCoord = (float)y / (terrainData.heightmapResolution - 1);
-                steepnesses[x, y] = terrain.terrainData.GetSteepness(xCoord, yCoord);
-            }
-        }
-        return steepnesses;
     }
 
     float GenerateHeightAtPoint(int x, int y, int offsetX, int offsetY)
@@ -251,25 +244,15 @@ public class TerrainMapGenerator : MonoBehaviour
         topIndicator.position = ConvertPointToWorldPosition(end);
 
         Vector2Int[,] before = Dijkstra(start, end);
-        path = Backtrack(start, end, before);
+        //Vector2Int[] path = Backtrack(start, end, before);
+        Vector2Int[] path = FindFinalPath(Backtrack(start, end, before));
 
         ClearParents();
         if (debug_drawMap) DebugDraw(before);
-        if (debug_drawPath) DrawPath(before);
+        if (debug_drawPath) DrawPath(path);
     }
 
-    Vector2Int[] directions =
-        {
-            new Vector2Int(0,1),
-            new Vector2Int(0,-1),
-            new Vector2Int(1,0),
-            new Vector2Int(-1,0),
 
-            new Vector2Int(-1,-1),
-            new Vector2Int(1,1),
-            new Vector2Int(-1,-1),
-            new Vector2Int(1,-1),
-        };
 
     int[,] colors;
     Vector2Int[,] Dijkstra(Vector2Int start, Vector2Int end)
@@ -295,7 +278,10 @@ public class TerrainMapGenerator : MonoBehaviour
             visited[top.x, top.y] = true;
             colors[top.x, top.y] = tmp.z;
             dist[top.x, top.y] = dist[before[top.x, top.y].x, before[top.x, top.y].y] + 1;
-            print(before[top.x, top.y].x + " " + before[top.x, top.y].y + " --> " + top.x + " " + top.y + " | s = " + colors[top.x,top.y]);
+            //print(before[top.x, top.y].x + " " + before[top.x, top.y].y + " --> " + top.x + " " + top.y + " | s = " + colors[top.x,top.y]);
+
+            if (top == end)
+                return before;
 
             for (int i = 0; i < directions.Length; i++)
             {
@@ -332,6 +318,56 @@ public class TerrainMapGenerator : MonoBehaviour
         return before;
     }
 
+    Vector2Int[] FindFinalPath(Vector2Int[] raw)
+    {
+        bool[,] visited = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        Vector2Int[,] before = new Vector2Int[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        bool[,] mapToSearch = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        for (int i = 0; i < raw.Length; i++)
+        {
+            mapToSearch[raw[i].x, raw[i].y] = true;
+        }
+
+        Vector2Int start = raw[0];
+        Vector2Int end = raw[raw.Length - 1];
+
+        before[start.x,start.y] = start;
+        visited[start.x, start.y] = true;
+
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+        queue.Enqueue(start);
+
+        while(queue.Count > 0) 
+        {
+            Vector2Int point = queue.Dequeue();
+
+            if (point == end)
+                break;
+
+            //print(before[point.x, point.y].x + " " + before[point.x, point.y].y + " --> " + point.x + " " + point.y);
+
+            for (int i = 0; i < directions.Length; i++)
+            {
+                Vector2Int newPoint = point + directions[i];
+
+                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
+                    continue;
+
+                if (mapToSearch[newPoint.x, newPoint.y] == false)
+                    continue;
+
+                if (visited[newPoint.x, newPoint.y])
+                    continue;
+
+                before[newPoint.x, newPoint.y] = point;
+                visited[newPoint.x, newPoint.y] = true;
+                queue.Enqueue(newPoint);
+            }
+        }
+
+        return Backtrack(start,end,before);
+    }
+
     Vector2Int[] Backtrack(Vector2Int start, Vector2Int end, Vector2Int[,] before)
     {
         List<Vector2Int> path = new List<Vector2Int>();
@@ -355,213 +391,7 @@ public class TerrainMapGenerator : MonoBehaviour
         return path.ToArray();
     }
 
-    /*
-    bool[,] visited;
-    Vector2Int[,] before;
-    Vector2Int[] BFS(Vector2Int start, Vector2Int end)
-    {
-        visited = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        before = new Vector2Int[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        Queue<Vector2Int> queue = new Queue<Vector2Int>();
-
-        queue.Enqueue(start);
-        visited[start.x, start.y] = true;
-        before[start.x, start.y] = start;
-
-        Vector2Int lastKnown = start;
-
-        while (queue.Count > 0)
-        {
-            Vector2Int point = queue.Dequeue();
-            lastKnown = point;
-            print(before[point.x, point.y].x + " " + before[point.x, point.y].y + " --> " + point.x + " " + point.y + " | s = " + steepnessMap[point.x, point.y]);
-
-            if (point == end)
-            {
-                print("backtracking from " + point.x + " " + point.y + " to " + start.x + " " + start.y);
-                return Backtrack(start, point);
-            }
-
-            float heightDiffrence = math.abs(heightMap[point.x, point.y] - heightMap[before[point.x, point.y].x, before[point.x, point.y].y]);
-            if (heightDiffrence > maxWalkableSteepness && heightDiffrence <= maxClimbableSteepness)
-            {
-                //SZUKAJ NAJBLIZSZEGO CHODZENIA
-
-                //na indeksie zero poczatek, na ostatnim chodznie
-                Vector2Int[] PathToClosestWalk = PathToClosestWalking(point);
-                if (PathToClosestWalk.Length > 0)
-                {
-                    //queue.Clear();
-                    print("FOUND PATH TO CLOSEST WALK");
-                    queue.Enqueue(PathToClosestWalk[PathToClosestWalk.Length - 1]);
-                    continue;
-                }
-            }
-
-            int aggg = 0;
-            int visi = 0;
-
-            //PIORYTET W DODAWANIU DO KOLEJKI DLA CHODZENIA
-            //najpierw dodawac chodzenia
-            for (int i = 0; i < directions.Length; i++)
-            {
-               Vector2Int newPoint = point + directions[i];
-
-                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
-               {
-                    aggg++;
-                    continue;
-               }
-
-                float newPointHeightDiffrence = math.abs(heightMap[newPoint.x, newPoint.y] - heightMap[point.x, point.y]);
-
-                if (newPointHeightDiffrence > maxWalkableSteepness) { continue; }
-
-                if (newPointHeightDiffrence > maxClimbableSteepness) { aggg++; continue; }
-
-                if (visited[newPoint.x, newPoint.y] == false)
-                {
-                    visited[newPoint.x, newPoint.y] = true;
-                    before[newPoint.x, newPoint.y] = point;
-
-                    queue.Enqueue(point + directions[i]);
-                }
-                else
-                {
-                    visi++;
-                    aggg++;
-                }
-            }
-
-            
-            for (int i = 0; i < directions.Length; i++)
-            {
-                Vector2Int newPoint = point + directions[i];
-
-                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
-                {
-                    aggg++;
-                    continue;
-                }
-                float newPointHeightDiffrence = math.abs(heightMap[newPoint.x, newPoint.y] - heightMap[point.x, point.y]);
-
-
-                if (newPointHeightDiffrence <= maxWalkableSteepness) { continue; }
-
-                if (newPointHeightDiffrence > maxClimbableSteepness) { aggg++; continue; }
-
-                if (visited[newPoint.x, newPoint.y] == false)
-                {
-                    visited[newPoint.x, newPoint.y] = true;
-                    before[newPoint.x, newPoint.y] = point;
-
-                    queue.Enqueue(point + directions[i]);
-                }
-                else
-                {
-                    visi++;
-                    aggg++;
-                }
-            }
-
-            if (aggg == 4)
-            {
-                print("CZTERY " + visi.ToString() + " " + queue.Count);
-            }
-        }
-
-
-        return Backtrack(start, lastKnown);
-    }
-
-    Vector2Int[] PathToClosestWalking(Vector2Int start)
-    {
-        List <Vector2Int> path = new List<Vector2Int>();
-
-       Queue<Vector2Int> queue = new Queue<Vector2Int> ();
-
-        print("looking for walking from " + start.x + ", " + start.y);
-
-        queue.Enqueue(start);
-
-        while (queue.Count > 0)
-        {
-            Vector2Int point = queue.Dequeue();
-            float heightDiffrence = math.abs(heightMap[point.x, point.y] - heightMap[before[point.x, point.y].x, before[point.x, point.y].y]);
-
-            if (heightDiffrence < maxWalkableSteepness)
-            {
-                print("found walking at " + point.x + " " + point.y);
-                return Backtrack(start, point);
-            }
-
-            //PIORYTET DLA SCHODZENIA NIZEJ SZUKAJAC CHODZENIA  ?
-            //najpierw dodawac te ktore schodza jak najnizej    ? 
-
-            //ZROBIC ABY SZUKAC NAJBLIZSZEGO SCHODZENIA
-            for (int i = 0; i < directions.Length; i++)
-            {
-                Vector2Int newPoint = point + directions[i];
-
-                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
-                {
-                    continue;
-                }
-
-                float newPointHeightDiffrence = math.abs(heightMap[newPoint.x, newPoint.y] - heightMap[point.x, point.y]);
-
-
-                if (newPointHeightDiffrence > maxClimbableSteepness) { continue; }
-
-                if (visited[newPoint.x, newPoint.y] == false)
-                {
-                    visited[newPoint.x, newPoint.y] = true;
-                    before[newPoint.x, newPoint.y] = point;
-
-                    queue.Enqueue(point + directions[i]);
-                }
-            }
-        }
-        
-
-        return path.ToArray();
-    }
-
-    Vector2Int[] Backtrack(Vector2Int start, Vector2Int end)
-    {
-        List<Vector2Int> path = new List<Vector2Int>();
-        int b = 0;
-        try
-        {
-
-
-        Vector2Int currentPoint = end;
-
-        path.Add(end);
-        currentPoint = before[currentPoint.x, currentPoint.y];
-            Vector2Int lastPoint = currentPoint;
-
-        do
-        {
-            path.Add(currentPoint);
-            lastPoint = currentPoint;
-            currentPoint = before[currentPoint.x, currentPoint.y];
-        }
-        while (currentPoint != lastPoint);
-
-        path.Reverse();
-
-        }
-        catch (Exception e)
-        {
-            print(path.Count);
-            print(b);
-        }
-        return path.ToArray();
-
-    }
-    */
-
+   
     Vector2Int FindHighestPeak()
     {
         float maxVal = -1;
@@ -626,7 +456,7 @@ public class TerrainMapGenerator : MonoBehaviour
         }
     }
 
-    public void DrawPath(Vector2Int[,] before)
+    public void DrawPath(Vector2Int[] path)
     {
         for (int i = 0; i < path.Length; i++)
         {
