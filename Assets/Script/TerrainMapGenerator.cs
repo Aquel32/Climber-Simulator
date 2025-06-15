@@ -238,7 +238,7 @@ public class TerrainMapGenerator : MonoBehaviour
     void FindPath()
     {
         Vector2Int end = new Vector2Int(terrainData.heightmapResolution / 2, terrainData.heightmapResolution / 2);
-        //end = new Vector2Int(92, 22);
+        //end = FindLowestPeak();
         Vector2Int start = FindHighestPeak();
 
         topIndicator.position = ConvertPointToWorldPosition(end);
@@ -390,7 +390,6 @@ public class TerrainMapGenerator : MonoBehaviour
 
         return path.ToArray();
     }
-
    
     Vector2Int FindHighestPeak()
     {
@@ -410,6 +409,35 @@ public class TerrainMapGenerator : MonoBehaviour
                 }
 
                 if (heightMap[x,y]  == maxVal)
+                {
+                    peaks.Add(new Vector2Int(y,x));
+                }
+            }
+        }
+
+        if (peaks.Count == 0) return new Vector2Int(0,0);
+
+        return peaks[random.Next(0, peaks.Count)];
+    }
+    
+    Vector2Int FindLowestPeak()
+    {
+        float minVal = 2;
+
+        List<Vector2Int> peaks = new List<Vector2Int>();
+
+        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        {
+            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            {
+                if (heightMap[x, y] < minVal)
+                {
+                    minVal = heightMap[x, y];
+
+                    peaks.Clear();
+                }
+
+                if (heightMap[x,y]  == minVal)
                 {
                     peaks.Add(new Vector2Int(y,x));
                 }
