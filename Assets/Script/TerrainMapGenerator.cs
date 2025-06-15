@@ -32,8 +32,17 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private float falloffScale = 2.2f;
 
     [Header("Rendering")]
-    [SerializeField] private Terrain terrain;
-    private TerrainData terrainData;
+    private Terrain mainTerrain;
+
+    [Serializable]
+    public struct TerrainPart
+    {
+        public Terrain terrain;
+        public Vector2Int direction;
+    }
+
+    [SerializeField] private TerrainPart[] terrainParts;
+
     [SerializeField] private Material walkMaterial, climbMaterial, unableMaterial;
 
     [Header("Pathfinding")]
@@ -53,7 +62,8 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private Transform pathPartPrefab;
     [SerializeField] private Transform debugParent;
 
-    float[,] heightMap;
+    float[,] mainPartHeightMap;
+    private int heightmapResolution;
 
     Vector2Int[] directions =
     {
@@ -86,7 +96,23 @@ public class TerrainMapGenerator : MonoBehaviour
     #region Terrain Generator
     void Generate()
     {
-        terrainData = terrain.terrainData;
+        heightmapResolution = mapWidth + 1;
+        mainTerrain = terrainParts[0].terrain;
+
+        Vector2Int offset = new Vector2Int(random.Next(-10000, 10000), random.Next(-10000, 10000));
+        for (int i = 0; i < terrainParts.Length; i++)
+        {
+            GeneratePart(terrainParts[i].terrain, terrainParts[i].direction, offset);
+        }
+    }
+
+    void GeneratePart(Terrain terrain, Vector2Int direction, Vector2Int offset)
+    {
+        bool main = mainTerrain == terrain;
+
+        float[,] heightMap = GenerateHeightMap(direction, offset, main);
+
+        if (main) mainPartHeightMap = heightMap;
 
         terrain.terrainData.terrainLayers = new TerrainLayer[]
         {
@@ -96,19 +122,21 @@ public class TerrainMapGenerator : MonoBehaviour
             Resources.Load<TerrainLayer>("Snow_TerrainLayer")
         };
 
-        terrainData.heightmapResolution = mapWidth + 1;
-        terrainData.size = new Vector3(mapWidth, mapDepth, mapHeight);
+        terrain.terrainData.heightmapResolution = heightmapResolution;
+        terrain.terrainData.size = new Vector3(mapWidth, mapDepth, mapHeight);
+        terrain.terrainData.SetHeights(0, 0, heightMap);
 
-        heightMap = GenerateHeightMap();
-        terrainData.SetHeights(0, 0, heightMap);
+        terrain.transform.position = new Vector3(
+            mapWidth * direction.x,
+            0,
+            mapHeight * direction.y
+        );
 
-        ApplyTextures();
+        ApplyTextures(terrain.terrainData, direction);
     }
 
-
-    void ApplyTextures()
+    void ApplyTextures(TerrainData terrainData, Vector2Int direction)
     {
-        TerrainData terrainData = terrain.terrainData;
         float[,,] splatmapData = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, terrainData.alphamapLayers];
 
         for (int x = 0; x < terrainData.alphamapWidth; x++)
@@ -151,27 +179,28 @@ public class TerrainMapGenerator : MonoBehaviour
         terrainData.SetAlphamaps(0, 0, splatmapData);
     }
 
-    float[,] GenerateHeightMap()
+    float[,] GenerateHeightMap(Vector2Int direction, Vector2Int offset, bool main)
     {
-        float[,] heights = new float[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        float[,] heights = new float[heightmapResolution, heightmapResolution];
 
-        int offsetX = random.Next(-10000, 10000);
-        int offsetY = random.Next(-10000, 10000);
-
-        for (int x = 0; x < terrainData.heightmapResolution; x++)
+        for (int x = 0; x < heightmapResolution; x++)
         {
-            for (int y = 0; y < terrainData.heightmapResolution; y++)
+            for (int y = 0; y < heightmapResolution; y++)
             {
-                heights[x, y] = GenerateHeightAtPoint(x, y, offsetX, offsetY);
+                heights[x, y] = GenerateHeightAtPoint(x + (mapWidth*direction.y), y + (mapWidth * direction.x), offset.x, offset.y, main);
             }
         }
-
+        
         return heights;
     }
 
-    float GenerateHeightAtPoint(int x, int y, int offsetX, int offsetY)
+    float GenerateHeightAtPoint(int x, int y, int offsetX, int offsetY, bool main)
     {
-        return RidgedPerlinNoise(x, y, offsetX, offsetY) * GetFalloffValue(x,y);
+        float ridgedPerlinNoiseValue = RidgedPerlinNoise(x, y, offsetX, offsetY);
+
+        if(main) ridgedPerlinNoiseValue *= GetFalloffValue(x, y);
+
+        return ridgedPerlinNoiseValue;
     }
 
     float RidgedPerlinNoise(float x, float y, float offsetX, float offsetY)
@@ -183,8 +212,8 @@ public class TerrainMapGenerator : MonoBehaviour
 
         for (int i = 0; i < octaves; i++)
         {
-            float xCoord = ((float)x / terrainData.heightmapResolution * scale + offsetX) * frequency;
-            float yCoord = ((float)y / terrainData.heightmapResolution * scale + offsetY) * frequency;
+            float xCoord = ((float)x / heightmapResolution * scale + offsetX) * frequency;
+            float yCoord = ((float)y / heightmapResolution * scale + offsetY) * frequency;
             float perlinValue = Mathf.PerlinNoise(xCoord, yCoord);
 
             float ridgedValue = 1f - Mathf.Abs(2f * perlinValue - 1f);
@@ -204,8 +233,8 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float GetFalloffValue(int x, int y)
     {
-        float nx = (float)x / (terrainData.heightmapResolution - 1) * 2f - 1f;
-        float ny = (float)y / (terrainData.heightmapResolution - 1) * 2f - 1f;
+        float nx = (float)x / (heightmapResolution - 1) * 2f - 1f;
+        float ny = (float)y / (heightmapResolution - 1) * 2f - 1f;
 
         float distance = GetNormalizedDistanceFromCenter(x, y);
 
@@ -218,8 +247,8 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float GetNormalizedDistanceFromCenter(int x, int y)
     {
-        float centerX = (terrain.terrainData.heightmapResolution - 1) / 2f;
-        float centerY = (terrain.terrainData.heightmapResolution - 1) / 2f;
+        float centerX = (mainTerrain.terrainData.heightmapResolution - 1) / 2f;
+        float centerY = (mainTerrain.terrainData.heightmapResolution - 1) / 2f;
 
         float dx = x - centerX;
         float dy = y - centerY;
@@ -237,7 +266,7 @@ public class TerrainMapGenerator : MonoBehaviour
 
     void FindPath()
     {
-        Vector2Int end = new Vector2Int(terrainData.heightmapResolution / 2, terrainData.heightmapResolution / 2);
+        Vector2Int end = new Vector2Int(heightmapResolution / 2, heightmapResolution / 2);
         //end = FindLowestPeak();
         Vector2Int start = FindHighestPeak();
 
@@ -257,10 +286,10 @@ public class TerrainMapGenerator : MonoBehaviour
     int[,] colors;
     Vector2Int[,] Dijkstra(Vector2Int start, Vector2Int end)
     {
-        colors = new int[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        bool[,] visited = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        int[,] dist = new int[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        Vector2Int[,] before = new Vector2Int[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        colors = new int[heightmapResolution, heightmapResolution];
+        bool[,] visited = new bool[heightmapResolution, heightmapResolution];
+        int[,] dist = new int[heightmapResolution, heightmapResolution];
+        Vector2Int[,] before = new Vector2Int[heightmapResolution, heightmapResolution];
 
         var pq = new Utils.PriorityQueue<Vector3Int, int>();
 
@@ -288,7 +317,7 @@ public class TerrainMapGenerator : MonoBehaviour
                Vector2Int newPoint = top + directions[i];
                 int color = 0;
 
-                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
+                if (newPoint.x < 0 || newPoint.x >= heightmapResolution || newPoint.y < 0 || newPoint.y >= heightmapResolution)
                     continue;
 
                 if (visited[newPoint.x, newPoint.y])
@@ -320,9 +349,9 @@ public class TerrainMapGenerator : MonoBehaviour
 
     Vector2Int[] FindFinalPath(Vector2Int[] raw)
     {
-        bool[,] visited = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        Vector2Int[,] before = new Vector2Int[terrainData.heightmapResolution, terrainData.heightmapResolution];
-        bool[,] mapToSearch = new bool[terrainData.heightmapResolution, terrainData.heightmapResolution];
+        bool[,] visited = new bool[heightmapResolution, heightmapResolution];
+        Vector2Int[,] before = new Vector2Int[heightmapResolution, heightmapResolution];
+        bool[,] mapToSearch = new bool[heightmapResolution, heightmapResolution];
         for (int i = 0; i < raw.Length; i++)
         {
             mapToSearch[raw[i].x, raw[i].y] = true;
@@ -350,7 +379,7 @@ public class TerrainMapGenerator : MonoBehaviour
             {
                 Vector2Int newPoint = point + directions[i];
 
-                if (newPoint.x < 0 || newPoint.x >= terrainData.heightmapResolution || newPoint.y < 0 || newPoint.y >= terrainData.heightmapResolution)
+                if (newPoint.x < 0 || newPoint.x >= heightmapResolution || newPoint.y < 0 || newPoint.y >= heightmapResolution)
                     continue;
 
                 if (mapToSearch[newPoint.x, newPoint.y] == false)
@@ -397,18 +426,18 @@ public class TerrainMapGenerator : MonoBehaviour
 
         List<Vector2Int> peaks = new List<Vector2Int>();
 
-        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        for (int y = 0; y < heightmapResolution; y++)
         {
-            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            for (int x = 0; x < heightmapResolution; x++)
             {
-                if (heightMap[x, y] >= maxVal)
+                if (mainPartHeightMap[x, y] >= maxVal)
                 {
-                    maxVal = heightMap[x, y];
+                    maxVal = mainPartHeightMap[x, y];
 
                     peaks.Clear();
                 }
 
-                if (heightMap[x,y]  == maxVal)
+                if (mainPartHeightMap[x,y]  == maxVal)
                 {
                     peaks.Add(new Vector2Int(y,x));
                 }
@@ -426,18 +455,18 @@ public class TerrainMapGenerator : MonoBehaviour
 
         List<Vector2Int> peaks = new List<Vector2Int>();
 
-        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        for (int y = 0; y < heightmapResolution; y++)
         {
-            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            for (int x = 0; x < heightmapResolution; x++)
             {
-                if (heightMap[x, y] < minVal)
+                if (mainPartHeightMap[x, y] < minVal)
                 {
-                    minVal = heightMap[x, y];
+                    minVal = mainPartHeightMap[x, y];
 
                     peaks.Clear();
                 }
 
-                if (heightMap[x,y]  == minVal)
+                if (mainPartHeightMap[x,y]  == minVal)
                 {
                     peaks.Add(new Vector2Int(y,x));
                 }
@@ -451,26 +480,26 @@ public class TerrainMapGenerator : MonoBehaviour
 
     Vector3 ConvertPointToWorldPosition(Vector2Int point)
     {
-        float xCoord = (float)point.x / (terrainData.heightmapResolution - 1);
-        float yCoord = (float)point.y / (terrainData.heightmapResolution - 1);
+        float xCoord = (float)point.x / (heightmapResolution - 1);
+        float yCoord = (float)point.y / (heightmapResolution - 1);
 
         return new Vector3(
-            terrain.transform.position.x + xCoord * terrainData.size.x,
-            terrain.transform.position.y + terrain.terrainData.GetInterpolatedHeight(xCoord, yCoord),
-            terrain.transform.position.z + yCoord * terrainData.size.z
+            mainTerrain.transform.position.x + xCoord * mainTerrain.terrainData.size.x,
+            mainTerrain.transform.position.y + mainTerrain.terrainData.GetInterpolatedHeight(xCoord, yCoord),
+            mainTerrain.transform.position.z + yCoord * mainTerrain.terrainData.size.z
         );
     }
 
     public void DebugDraw(Vector2Int[,] before)
     {
-        for (int y = 0; y < terrainData.heightmapResolution; y++)
+        for (int y = 0; y < heightmapResolution; y++)
         {
-            for (int x = 0; x < terrainData.heightmapResolution; x++)
+            for (int x = 0; x < heightmapResolution; x++)
             {
                 Vector2Int point = new Vector2Int(x, y);
 
                 Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, debugParent);
-                obj.name = point.ToString() + " | h: " + heightMap[x,y];
+                obj.name = point.ToString() + " | h: " + mainPartHeightMap[x,y];
 
                 if (colors[point.x,point.y] == 0)
                 {
