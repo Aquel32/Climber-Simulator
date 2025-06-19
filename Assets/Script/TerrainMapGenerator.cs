@@ -47,12 +47,8 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private Material walkMaterial, climbMaterial, unableMaterial;
 
     [Header("Pathfinding")]
+    [SerializeField] private PathfindingPreset pathfindingPreset;
     
-    [SerializeField] private float maxWalkableSteepness;
-    [SerializeField] private float maxClimbableSteepness;
-    [SerializeField,Range(0,1000)] private int piorityDistancePrimary = 100;
-    [SerializeField,Range(0 ,1000)] private int piorityDistanceSecondary = 100;
-    [SerializeField,Range(0,1000)] private int piorityDistanceTetriary = 100;
 
     [Header("Debug")]
     [SerializeField] private bool debug_drawMap;
@@ -65,6 +61,7 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float[,] mainPartHeightMap;
     private int heightmapResolution;
+    int generatedSeed = -1;
 
     Vector2Int[] directions =
     {
@@ -87,7 +84,11 @@ public class TerrainMapGenerator : MonoBehaviour
     void InitializeMap()
     {
         random = new System.Random(seed);
-        Generate();
+
+        if(generatedSeed == -1 || seed != generatedSeed)
+        {
+            Generate();
+        }
 
         if (!EditorApplication.isPlaying) return;
 
@@ -97,6 +98,8 @@ public class TerrainMapGenerator : MonoBehaviour
     #region Terrain Generator
     void Generate()
     {
+        generatedSeed = seed;
+
         heightmapResolution = mapWidth + 1;
         mainTerrain = terrainParts[0].terrain;
 
@@ -340,18 +343,18 @@ public class TerrainMapGenerator : MonoBehaviour
                 //float newPointHeightDiffrence = math.abs(ConvertPointToWorldPosition(newPoint).y - ConvertPointToWorldPosition(top).y);
                 float steepness = mainTerrain.terrainData.GetSteepness((float)newPoint.x / mapWidth, (float)newPoint.y / mapHeight);
 
-                int priority = dist[top.x, top.y] + piorityDistancePrimary;
+                int priority = dist[top.x, top.y] + pathfindingPreset.priorityBase;
 
                 before[newPoint.x, newPoint.y] = top;
 
-                if (steepness > maxWalkableSteepness)
+                if (steepness > pathfindingPreset.maxWalkableSteepness)
                 {
-                    priority += piorityDistanceSecondary;
+                    priority += pathfindingPreset.priorityWalk;
                     color = 1;
                 }
-                if (steepness > maxClimbableSteepness)
+                if (steepness > pathfindingPreset.maxClimbableSteepness)
                 {
-                    priority += piorityDistanceTetriary;
+                    priority += pathfindingPreset.priorityClimb;
                     color = 2;
                 }
 
