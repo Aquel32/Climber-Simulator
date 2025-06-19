@@ -337,22 +337,25 @@ public class TerrainMapGenerator : MonoBehaviour
                 if (visited[newPoint.x, newPoint.y])
                     continue;
 
-                float newPointHeightDiffrence = math.abs(ConvertPointToWorldPosition(newPoint).y - ConvertPointToWorldPosition(top).y);
-                //int priority = dist[top.x, top.y] + (int)((piorityDistancePrimary * (1 - mainTerrain.terrainData.GetSteepness(ConvertPointToWorldPosition(newPoint).x, ConvertPointToWorldPosition(newPoint).y))/90));
+                //float newPointHeightDiffrence = math.abs(ConvertPointToWorldPosition(newPoint).y - ConvertPointToWorldPosition(top).y);
+                float steepness = mainTerrain.terrainData.GetSteepness((float)newPoint.x / mapWidth, (float)newPoint.y / mapHeight);
+
                 int priority = dist[top.x, top.y] + piorityDistancePrimary;
 
                 before[newPoint.x, newPoint.y] = top;
 
-                if (newPointHeightDiffrence > maxWalkableSteepness)
+                if (steepness > maxWalkableSteepness)
                 {
                     priority += piorityDistanceSecondary;
                     color = 1;
                 }
-                if (newPointHeightDiffrence > maxClimbableSteepness)
+                if (steepness > maxClimbableSteepness)
                 {
                     priority += piorityDistanceTetriary;
                     color = 2;
                 }
+
+                priority = (int)(priority * ((steepness / 90f)));
 
 
                 pq.Enqueue(new Vector3Int(newPoint.x,newPoint.y,color), priority);
@@ -533,7 +536,7 @@ public class TerrainMapGenerator : MonoBehaviour
         for (int i = 0; i < path.Length; i++)
         {
             Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(path[i]), Quaternion.identity, pathParent);
-            obj.name = path[i].ToString();
+            obj.name = path[i].ToString() + " | " + mainTerrain.terrainData.GetSteepness((float)path[i].x / mapWidth, (float)path[i].y / mapHeight);
             obj.localScale = new Vector3(0.7f, 0.7f, 0.7f);
 
             if (colors[path[i].x, path[i].y] == 0)
