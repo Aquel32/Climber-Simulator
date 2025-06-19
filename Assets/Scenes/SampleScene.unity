@@ -1620,8 +1620,8 @@ MonoBehaviour:
   mapHeight: 1024
   mapDepth: 220
   scale: 1.59
-  seed: 147
-  octaves: 6
+  seed: 202
+  octaves: 8
   persistence: 0.5
   lacunarity: 2
   falloffDistancePower: -2.5

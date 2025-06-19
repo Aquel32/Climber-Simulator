@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.LightTransport;
+using static UnityEditor.Experimental.GraphView.GraphView;
 using static UnityEditor.ShaderData;
 
 public class TerrainMapGenerator : MonoBehaviour
@@ -146,20 +147,16 @@ public class TerrainMapGenerator : MonoBehaviour
                 float x_01 = (float)x / terrainData.alphamapWidth;
                 float y_01 = (float)y / terrainData.alphamapHeight;
 
-                float height = terrainData.GetInterpolatedHeight(x_01, y_01);
-                float normalizedHeight = height / terrainData.size.y;
-
-                float steepness = terrainData.GetSteepness(x_01, y_01);
-                float flatness = 1f - (steepness / 90f);
-
+                float height = terrainData.GetInterpolatedHeight(x_01, y_01) / terrainData.size.y;
+                float stepness = terrainData.GetSteepness(x_01, y_01) / 90f;
                 Vector3 normal = terrainData.GetInterpolatedNormal(x_01, y_01);
 
                 float[] splatWeights = new float[terrainData.alphamapLayers];
 
-                float grassWeight = Mathf.Clamp01(flatness * (1f - normalizedHeight)) * 0.3f;
-                float gravelWeight = Mathf.Clamp01((1f - flatness) * (1f - normalizedHeight));
-                float rockWeight = Mathf.Clamp01((1f - flatness) * normalizedHeight);
-                float snowWeight = Mathf.Clamp01(normalizedHeight * Mathf.Clamp01(normal.z)) * 1.7f;
+                float grassWeight = 0; //nisko plasko
+                float gravelWeight = 0; //nisko stromo
+                float rockWeight = stepness; //wysoko stromo
+                float snowWeight = (1f - stepness); //wysoko plasko
 
                 splatWeights[0] = grassWeight;
                 splatWeights[1] = gravelWeight;
@@ -172,6 +169,25 @@ public class TerrainMapGenerator : MonoBehaviour
                 for (int i = 0; i < terrainData.alphamapLayers; i++)
                 {
                     splatmapData[x, y, i] = splatWeights[i] / total;
+                }
+
+                int featherWidth = 8;
+                float edgeFactor = 1f;
+
+                if (x < featherWidth)
+                    edgeFactor *= (float)x / featherWidth;
+                else if (x >= terrainData.alphamapWidth - featherWidth)
+                    edgeFactor *= (float)(terrainData.alphamapWidth - 1 - x) / featherWidth;
+
+                if (y < featherWidth)
+                    edgeFactor *= (float)y / featherWidth;
+                else if (y >= terrainData.alphamapWidth - featherWidth)
+                    edgeFactor *= (float)(terrainData.alphamapWidth - 1 - y) / featherWidth;
+
+                for (int i = 0; i < terrainData.alphamapLayers; i++)
+                {
+                    splatWeights[i] = Mathf.Lerp(0.5f, splatWeights[i], edgeFactor);
+                    splatmapData[x, y, i] = splatWeights[i];
                 }
             }
         }
@@ -233,29 +249,27 @@ public class TerrainMapGenerator : MonoBehaviour
 
     float GetFalloffValue(int x, int y)
     {
-        float nx = (float)x / (heightmapResolution - 1) * 2f - 1f;
-        float ny = (float)y / (heightmapResolution - 1) * 2f - 1f;
-
         float distance = GetNormalizedDistanceFromCenter(x, y);
 
-        distance = Mathf.Clamp01(distance);
+        float falloff = distance - 0.1f;
 
-        float falloff = Mathf.Pow(distance, falloffDistancePower) / (Mathf.Pow(distance, falloffDistancePower) + Mathf.Pow(falloffScale - falloffScale * distance, falloffDistancePower));
+        if (falloff > 1f) falloff = 1f;
+        else if (falloff < 0f) falloff = 0f;
 
-        return Mathf.Clamp01(1f - falloff);
+        return falloff;
     }
 
     float GetNormalizedDistanceFromCenter(int x, int y)
     {
-        float centerX = (mainTerrain.terrainData.heightmapResolution - 1) / 2f;
-        float centerY = (mainTerrain.terrainData.heightmapResolution - 1) / 2f;
+        float centerX = (heightmapResolution - 1f) / 2f;
+        float centerY = (heightmapResolution - 1f) / 2f;
 
         float dx = x - centerX;
         float dy = y - centerY;
 
         float distance = Mathf.Sqrt(dx * dx + dy * dy);
 
-        float maxDistance = Mathf.Sqrt(centerX * centerX + centerY * centerY);
+        float maxDistance = heightmapResolution/5;
 
         return distance / maxDistance;
     }
@@ -324,6 +338,7 @@ public class TerrainMapGenerator : MonoBehaviour
                     continue;
 
                 float newPointHeightDiffrence = math.abs(ConvertPointToWorldPosition(newPoint).y - ConvertPointToWorldPosition(top).y);
+                //int priority = dist[top.x, top.y] + (int)((piorityDistancePrimary * (1 - mainTerrain.terrainData.GetSteepness(ConvertPointToWorldPosition(newPoint).x, ConvertPointToWorldPosition(newPoint).y))/90));
                 int priority = dist[top.x, top.y] + piorityDistancePrimary;
 
                 before[newPoint.x, newPoint.y] = top;
