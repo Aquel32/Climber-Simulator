@@ -48,16 +48,21 @@ public class TerrainMapGenerator : MonoBehaviour
 
     [Header("Pathfinding")]
     [SerializeField] private PathfindingPreset pathfindingPreset;
-    
+
+    [Header("Camps")]
+    [SerializeField] private int campMinimumDistance = 50;
+    [SerializeField] private int campSize = 10;
+    [SerializeField] private int campCount = 3;
 
     [Header("Debug")]
     [SerializeField] private bool debug_drawMap;
     [SerializeField] private bool debug_drawPath;
+    [SerializeField] private bool debug_drawCamp;
 
-    [SerializeField] private Transform topIndicator;
     [SerializeField] private Transform pathParent;
     [SerializeField] private Transform pathPartPrefab;
     [SerializeField] private Transform debugParent;
+    [SerializeField] private Transform campsParent;
 
     float[,] mainPartHeightMap;
     private int heightmapResolution;
@@ -85,14 +90,18 @@ public class TerrainMapGenerator : MonoBehaviour
     {
         random = new System.Random(seed);
 
-        //if(generatedSeed == -1 || seed != generatedSeed)
-        //{
+        if(generatedSeed == -1 || seed != generatedSeed || mainPartHeightMap == null)
+        {
             Generate();
-        //}
+        }
 
         if (!EditorApplication.isPlaying) return;
 
-        FindPath();
+        Vector2Int[] path = FindPath();
+
+        Vector2Int[] camps = FindCampsLocation(path);
+
+        if(debug_drawCamp) DrawCamps(camps);
     }
 
     #region Terrain Generator
@@ -143,7 +152,7 @@ public class TerrainMapGenerator : MonoBehaviour
     void ApplyTextures(TerrainData terrainData, Vector2Int direction)
     {
         float[,,] splatmapData = new float[terrainData.alphamapWidth, terrainData.alphamapHeight, terrainData.alphamapLayers];
-        print(mainTerrain.terrainData.GetSteepness(3F / mapWidth, 3F / mapHeight));
+
         for (int x = 0; x < terrainData.alphamapWidth; x++)
         {
             for (int y = 0; y < terrainData.alphamapHeight; y++)
@@ -156,19 +165,20 @@ public class TerrainMapGenerator : MonoBehaviour
 
                 float rockSteepness = 0.6f;
 
-                float grassWeight = 0; //nisko plasko
-                float gravelWeight = 0; //nisko stromo
-                float rockWeight = stepness >= rockSteepness ? 1 : Mathf.Clamp01(stepness - 0.2f); //wysoko stromo
-                float snowWeight = stepness >= rockSteepness ? Mathf.Clamp01(1f - stepness - 0.2f) : 1; //wysoko plasko
+                float gravelWeight = 0;
+                float rockWeight = stepness >= rockSteepness ? 1 : 0;
+                float snowWeight = stepness >= rockSteepness ? 0 : 1;
 
-                splatWeights[0] = grassWeight;
+                splatWeights[0] = 0; //trawa
                 splatWeights[1] = gravelWeight;
                 splatWeights[2] = rockWeight;
                 splatWeights[3] = snowWeight;
-             
+
+                float total = splatWeights.Sum();
+                if (total == 0) total = 1;
                 for (int i = 0; i < terrainData.alphamapLayers; i++)
                 {
-                    splatmapData[y, x, i] = splatWeights[i];
+                    splatmapData[y, x, i] = splatWeights[i] / total;
                 }
             }
         }
@@ -259,13 +269,11 @@ public class TerrainMapGenerator : MonoBehaviour
 
     #region Pathfinding
 
-    void FindPath()
+    Vector2Int[] FindPath()
     {
         Vector2Int end = new Vector2Int(heightmapResolution / 2, heightmapResolution / 2);
         //end = FindLowestPeak();
         Vector2Int start = FindHighestPeak();
-
-        topIndicator.position = ConvertPointToWorldPosition(end);
 
         Vector2Int[,] before = Dijkstra(start, end);
         //Vector2Int[] path = Backtrack(start, end, before);
@@ -274,6 +282,8 @@ public class TerrainMapGenerator : MonoBehaviour
         ClearParents();
         if (debug_drawMap) DebugDraw(before);
         if (debug_drawPath) DrawPath(path);
+
+        return path;
     }
 
 
@@ -489,25 +499,70 @@ public class TerrainMapGenerator : MonoBehaviour
         );
     }
 
+    #endregion
+
+    #region Camp Generator
+
+    Vector2Int[] FindCampsLocation(Vector2Int[] path)
+    {
+        var pq = new Utils.PriorityQueue<Vector2Int, int>();
+
+        int distance = campMinimumDistance;
+        for (int i = path.Length - 1; i >= 0; i--)
+        {
+            Vector2Int point = path[i];
+
+            if (mainTerrain.terrainData.GetSteepness((float)point.x / mapWidth, (float)point.y / mapHeight) > pathfindingPreset.maxWalkableSteepness) continue;
+
+            distance++;
+            if (distance < campMinimumDistance) continue;
+
+            int criteriaPoints = CheckAreaCampCriteria(point);
+            pq.Enqueue(point, criteriaPoints);
+
+            distance = 0;
+        }
+        List<Vector2Int> camps = new List<Vector2Int>();
+
+        if(campCount > pq.Count) campCount = pq.Count;
+
+        for (int i = 0; i < campCount; i++)
+        {
+            camps.Add(pq.Dequeue());
+        }
+        return camps.ToArray();
+    }
+
+    int CheckAreaCampCriteria(Vector2Int point)
+    {
+        int result = 0;
+
+        for (int x = -(campSize/2); x < (campSize / 2); x++)
+        {
+            for (int y = -(campSize / 2); y < (campSize / 2); y++)
+            {
+                Vector2Int newPoint = new Vector2Int(point.x + x, point.y + y);
+
+                float steepness = mainTerrain.terrainData.GetSteepness((float)newPoint.x / mapWidth, (float)newPoint.y / mapHeight);
+
+                result += (int)steepness;
+            }
+        }
+
+        return result;
+    }
+
+    #endregion
+
+    #region Debug
+
     public void DebugDraw(Vector2Int[,] before)
     {
         for (int y = 0; y < heightmapResolution; y++)
         {
             for (int x = 0; x < heightmapResolution; x++)
             {
-                Vector2Int point = new Vector2Int(x, y);
-
-                Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, debugParent);
-                obj.name = point.ToString() + " | h: " + mainPartHeightMap[x,y];
-
-                if (colors[point.x,point.y] == 0)
-                {
-                    obj.GetComponent<MeshRenderer>().material = walkMaterial;
-                }
-                else if (colors[point.x, point.y] == 1)
-                {
-                    obj.GetComponent<MeshRenderer>().material = climbMaterial;
-                }
+                DrawPoint(new Vector2Int(x, y), debugParent, 0.3f);
             }
         }
     }
@@ -516,18 +571,31 @@ public class TerrainMapGenerator : MonoBehaviour
     {
         for (int i = 0; i < path.Length; i++)
         {
-            Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(path[i]), Quaternion.identity, pathParent);
-            obj.name = path[i].ToString() + " | " + mainTerrain.terrainData.GetSteepness((float)path[i].x / mapWidth, (float)path[i].y / mapHeight);
-            obj.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+            DrawPoint(path[i], pathParent, 0.7f);
+        }
+    }
+    
+    public void DrawCamps(Vector2Int[] camps)
+    {
+        for (int i = 0; i < camps.Length; i++)
+        {
+            DrawPoint(camps[i], campsParent, 3f);
+        }
+    }
 
-            if (colors[path[i].x, path[i].y] == 0)
-            {
-                obj.GetComponent<MeshRenderer>().material = walkMaterial;
-            }
-            else if (colors[path[i].x, path[i].y] == 1)
-            {
-                obj.GetComponent<MeshRenderer>().material = climbMaterial;
-            }
+    public void DrawPoint(Vector2Int point, Transform parent, float scale)
+    {
+        Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, parent);
+        obj.name = point.ToString() + " | " + mainTerrain.terrainData.GetSteepness((float)point.x / mapWidth, (float)point.y / mapHeight) + " | " + mainPartHeightMap[point.x, point.y];
+        obj.localScale = new Vector3(scale, scale, scale);
+
+        if (colors[point.x, point.y] == 0)
+        {
+            obj.GetComponent<MeshRenderer>().material = walkMaterial;
+        }
+        else if (colors[point.x, point.y] == 1)
+        {
+            obj.GetComponent<MeshRenderer>().material = climbMaterial;
         }
     }
 
@@ -539,6 +607,11 @@ public class TerrainMapGenerator : MonoBehaviour
         }
 
         foreach (Transform child in debugParent)
+        {
+            Destroy(child.gameObject);
+        }
+        
+        foreach (Transform child in campsParent)
         {
             Destroy(child.gameObject);
         }
