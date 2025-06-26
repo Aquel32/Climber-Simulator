@@ -14,7 +14,10 @@ using static UnityEditor.ShaderData;
 
 public class TerrainMapGenerator : MonoBehaviour
 {
-    private System.Random random;
+    public static TerrainMapGenerator Instance;
+    private void Awake() { Instance = this; }
+
+    [HideInInspector] public System.Random random;
 
     [Header("Settings")]
     [SerializeField] private int mapWidth;
@@ -50,6 +53,8 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private PathfindingPreset pathfindingPreset;
 
     [Header("Camps")]
+    [SerializeField] private Camp campPrefab;
+    [SerializeField] private Transform campsParent;
     [SerializeField] private int campMinimumDistance = 50;
     [SerializeField] private int campSize = 10;
     [SerializeField] private int campCount = 3;
@@ -59,16 +64,19 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private bool debug_drawPath;
     [SerializeField] private bool debug_drawCamp;
 
-    [SerializeField] private Transform pathParent;
-    [SerializeField] private Transform pathPartPrefab;
-    [SerializeField] private Transform debugParent;
-    [SerializeField] private Transform campsParent;
+    [SerializeField] private Transform debug_pathPartPrefab;
+    [SerializeField] private Transform debug_pathParent;
+    [SerializeField] private Transform debug_mapParent;
+    [SerializeField] private Transform debug_campsParent;
 
-    float[,] mainPartHeightMap;
+    private float[,] mainPartHeightMap;
     private int heightmapResolution;
-    int generatedSeed = -1;
+    private int generatedSeed = -1;
+    int[,] colors;
+    private Camp[] campList;
 
-    Vector2Int[] directions =
+
+    private Vector2Int[] directions =
     {
             new Vector2Int(0,1),
             new Vector2Int(0,-1),
@@ -100,8 +108,10 @@ public class TerrainMapGenerator : MonoBehaviour
         Vector2Int[] path = FindPath();
 
         Vector2Int[] camps = FindCampsLocation(path);
+        InstantiateCamps(camps);
 
         if(debug_drawCamp) DrawCamps(camps);
+        if (debug_drawPath) DrawPath(path);
     }
 
     #region Terrain Generator
@@ -281,14 +291,12 @@ public class TerrainMapGenerator : MonoBehaviour
 
         ClearParents();
         if (debug_drawMap) DebugDraw(before);
-        if (debug_drawPath) DrawPath(path);
 
         return path;
     }
 
 
 
-    int[,] colors;
     Vector2Int[,] Dijkstra(Vector2Int start, Vector2Int end)
     {
         colors = new int[heightmapResolution, heightmapResolution];
@@ -487,18 +495,6 @@ public class TerrainMapGenerator : MonoBehaviour
         return peaks[random.Next(0, peaks.Count)];
     }
 
-    Vector3 ConvertPointToWorldPosition(Vector2Int point)
-    {
-        float xCoord = (float)point.x / (heightmapResolution - 1);
-        float yCoord = (float)point.y / (heightmapResolution - 1);
-
-        return new Vector3(
-            mainTerrain.transform.position.x + xCoord * mainTerrain.terrainData.size.x,
-            mainTerrain.transform.position.y + mainTerrain.terrainData.GetInterpolatedHeight(xCoord, yCoord),
-            mainTerrain.transform.position.z + yCoord * mainTerrain.terrainData.size.z
-        );
-    }
-
     #endregion
 
     #region Camp Generator
@@ -523,6 +519,8 @@ public class TerrainMapGenerator : MonoBehaviour
             distance = 0;
         }
         List<Vector2Int> camps = new List<Vector2Int>();
+
+        campCount = path.Length / campMinimumDistance;
 
         if(campCount > pq.Count) campCount = pq.Count;
 
@@ -552,40 +550,81 @@ public class TerrainMapGenerator : MonoBehaviour
         return result;
     }
 
+    void InstantiateCamps(Vector2Int[] locations)
+    {
+        campList = new Camp[locations.Length];
+
+        for (int i = 0; i < locations.Length; i++)
+        {
+            Camp camp = Instantiate(campPrefab, ConvertPointToWorldPosition(locations[i]), Quaternion.identity, campsParent);
+            campList[i] = camp;
+
+            camp.Initialize(campSize, i, campCount);
+        }
+    }
+
+    #endregion
+
+    #region Utility
+    public Vector3 ConvertPointToWorldPosition(Vector2Int point)
+    {
+        float xCoord = (float)point.x / (heightmapResolution - 1);
+        float yCoord = (float)point.y / (heightmapResolution - 1);
+
+        return new Vector3(
+            mainTerrain.transform.position.x + xCoord * mainTerrain.terrainData.size.x,
+            mainTerrain.transform.position.y + mainTerrain.terrainData.GetInterpolatedHeight(xCoord, yCoord),
+            mainTerrain.transform.position.z + yCoord * mainTerrain.terrainData.size.z
+        );
+    }
+    
+    public Vector2Int ConvertWorldPositionToPoint(Vector3 position)
+    {
+        return new Vector2Int(
+           (int)(position.x - mainTerrain.transform.position.x),
+           (int)(position.z - mainTerrain.transform.position.z)
+        );
+    }
+
+    public float GetHeightAtPoint(Vector2 point)
+    {
+        return mainTerrain.terrainData.GetInterpolatedHeight(point.x / (heightmapResolution - 1), point.y / (heightmapResolution - 1));
+    }
+    
     #endregion
 
     #region Debug
 
-    public void DebugDraw(Vector2Int[,] before)
+    void DebugDraw(Vector2Int[,] before)
     {
         for (int y = 0; y < heightmapResolution; y++)
         {
             for (int x = 0; x < heightmapResolution; x++)
             {
-                DrawPoint(new Vector2Int(x, y), debugParent, 0.3f);
+                DrawPoint(new Vector2Int(x, y), debug_mapParent, 0.3f);
             }
         }
     }
 
-    public void DrawPath(Vector2Int[] path)
+    void DrawPath(Vector2Int[] path)
     {
         for (int i = 0; i < path.Length; i++)
         {
-            DrawPoint(path[i], pathParent, 0.7f);
+            DrawPoint(path[i], debug_pathParent, 0.7f);
         }
     }
     
-    public void DrawCamps(Vector2Int[] camps)
+    void DrawCamps(Vector2Int[] camps)
     {
         for (int i = 0; i < camps.Length; i++)
         {
-            DrawPoint(camps[i], campsParent, 3f);
+            DrawPoint(camps[i], debug_campsParent, 3f);
         }
     }
 
-    public void DrawPoint(Vector2Int point, Transform parent, float scale)
+    void DrawPoint(Vector2Int point, Transform parent, float scale)
     {
-        Transform obj = Instantiate(pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, parent);
+        Transform obj = Instantiate(debug_pathPartPrefab, ConvertPointToWorldPosition(point), Quaternion.identity, parent);
         obj.name = point.ToString() + " | " + mainTerrain.terrainData.GetSteepness((float)point.x / mapWidth, (float)point.y / mapHeight) + " | " + mainPartHeightMap[point.x, point.y];
         obj.localScale = new Vector3(scale, scale, scale);
 
@@ -599,14 +638,19 @@ public class TerrainMapGenerator : MonoBehaviour
         }
     }
 
-    public void ClearParents()
+    void ClearParents()
     {
-        foreach (Transform child in pathParent)
+        foreach (Transform child in debug_pathParent)
         {
             Destroy(child.gameObject);
         }
 
-        foreach (Transform child in debugParent)
+        foreach (Transform child in debug_mapParent)
+        {
+            Destroy(child.gameObject);
+        }
+        
+        foreach (Transform child in debug_campsParent)
         {
             Destroy(child.gameObject);
         }
@@ -619,8 +663,10 @@ public class TerrainMapGenerator : MonoBehaviour
 
     #endregion
 
-    public void OnValidate()
+    void OnValidate()
     {
+        Instance = this;
+
         if (octaves <= 0) octaves = 1;
         
         InitializeMap();
