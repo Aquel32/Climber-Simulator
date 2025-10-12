@@ -60,6 +60,8 @@ public class TerrainMapGenerator : MonoBehaviour
     [SerializeField] private int campCount = 3;
 
     [Header("Debug")]
+    [SerializeField] private bool debug_disableMapGeneration;
+    [SerializeField] private bool debug_disablePathGeneration;
     [SerializeField] private bool debug_drawMap;
     [SerializeField] private bool debug_drawPath;
     [SerializeField] private bool debug_drawCamp;
@@ -96,6 +98,8 @@ public class TerrainMapGenerator : MonoBehaviour
 
     void InitializeMap()
     {
+        if (debug_disableMapGeneration) return;
+
         random = new System.Random(seed);
 
         if(generatedSeed == -1 || seed != generatedSeed || mainPartHeightMap == null)
@@ -104,6 +108,7 @@ public class TerrainMapGenerator : MonoBehaviour
         }
 
         if (!EditorApplication.isPlaying) return;
+        if (debug_disablePathGeneration) return;
 
         Vector2Int[] path = FindPath();
 
