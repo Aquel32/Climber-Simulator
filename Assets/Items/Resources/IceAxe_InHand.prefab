@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &831599979543319977
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4223657722054356728}
+  - component: {fileID: 6925152339627433479}
+  m_Layer: 0
+  m_Name: Script
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &4223657722054356728
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 831599979543319977}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1701051303636928627}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6925152339627433479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 831599979543319977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 519eaf9737ae5c6428c9a828e6625cde, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
+--- !u!1 &6684032890400572954
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1701051303636928627}
+  - component: {fileID: 1962326685016471696}
+  m_Layer: 0
+  m_Name: IceAxe_InHand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1701051303636928627
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6684032890400572954}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2132998534810917708}
+  - {fileID: 4223657722054356728}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1962326685016471696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6684032890400572954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!1001 &59734407519168474
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1701051303636928627}
+    m_Modifications:
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.1071
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0579
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.1094
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.54050845
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.57983774
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.4156799
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.44592494
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -165.162
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 88.933
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: -85.84
+      objectReference: {fileID: 0}
+    - target: {fileID: 2111580183644250294, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+      propertyPath: m_Name
+      value: Ice_Axe
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+--- !u!4 &2132998534810917708 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2111580183643896982, guid: 4ce01f0a77e46294eb6f62d4f428db5e, type: 3}
+  m_PrefabInstance: {fileID: 59734407519168474}
+  m_PrefabAsset: {fileID: 0}

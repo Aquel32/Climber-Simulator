@@ -4,6 +4,10 @@ using UnityEngine.UIElements;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public static PlayerMovement Instance;
+
+    public bool canMove;
+
     [Header("Required References")]
     public Rigidbody playerRigidbody;
     public Transform playerTransform;
@@ -34,16 +38,13 @@ public class PlayerMovement : MonoBehaviour
     public enum MovementState { Walking, IceAxeSupport, Climbing, Airborne, Ragdoll }
     public MovementState currentState = MovementState.Airborne;
 
-    // --- Unity Methods ---
-    [Header("Rigs")]
-    public TwoBoneIKConstraint leftHandRig;
-    public Transform leftHandRigTarget;
-
     void Awake()
     {
+        Instance = this;
+
         if (playerRigidbody == null || playerTransform == null || playerAnimator == null)
         {
-            Debug.LogError("Required Rigidbody/Transform references are missing! Disabling script.");
+            //Debug.LogError("Required Rigidbody/Transform references are missing! Disabling script.");
             enabled = false;
             return;
         }
@@ -174,6 +175,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
+        if (!canMove) return;
+
         if (movementInput.magnitude < 0.1f)
         {
             // Stop horizontal Rigidbody velocity immediately when input is released
@@ -268,22 +271,7 @@ public class PlayerMovement : MonoBehaviour
         //IF HIT LESS MISTAKE CHANCE
         //IF NOT (we re using ice axe) INCREASE MISTAKE CHANCE
 
-        RaycastHit hit;
-
-        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, 1, groundLayer))
-        {
-            //surfaceNormal = hit.normal;
-            //float surfaceAngle = Vector3.Angle(surfaceNormal, Vector3.up);
-            //float distanceToGround = hit.distance - 0.1f;
-            leftHandRig.weight = 1;
-            leftHandRigTarget.position = hit.point;
-            //SHOW SNOW EFFECT ON ICE AXE
-            //SMOOTH CHANGE OF WEIGHT
-        }
-        else
-        {
-            leftHandRig.weight = 0;
-        }
+        
 
 
         //leftHandRig.gameObject.SetActive(currentState == MovementState.IceAxeSupport);

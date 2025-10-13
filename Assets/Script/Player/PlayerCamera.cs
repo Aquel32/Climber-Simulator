@@ -1,9 +1,11 @@
-using NUnit.Framework;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerCamera : MonoBehaviour
 {
+    public static PlayerCamera Instance;
+
+    public bool canUseMouse;
+
     [Header("Target & Components")]
     public Transform cameraRotationTransform;
     public Transform cameraTransform;
@@ -20,22 +22,28 @@ public class PlayerCamera : MonoBehaviour
     private float yaw = 0.0f;
     private float pitch = 0.0f;
 
-    [Header("Meshes")]
-    public List<SkinnedMeshRenderer> meshesToHide = new List<SkinnedMeshRenderer>();
+    void Awake()
+    {
+        Instance = this;
+
+        if (cameraRotationTransform == null || cameraTransform == null || orientationTransform == null)
+        {
+            //Debug.LogError("Required transforms references are missing! Disabling script.");
+            enabled = false;
+            return;
+        }
+    }
 
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        for (int i = 0; i < meshesToHide.Count; i++)
-        {
-            meshesToHide[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
-        }
     }
 
     void Update()
     {
+        if (!canUseMouse) return;
+
         float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
         float mouseY = Input.GetAxis("Mouse Y") * rotationSpeed;
 
@@ -51,15 +59,16 @@ public class PlayerCamera : MonoBehaviour
     void LateUpdate()
     {
         Quaternion targetPitchRotation = Quaternion.Euler(pitch, 0f, 0f);
+        cameraRotationTransform.localRotation = Quaternion.Slerp(cameraRotationTransform.localRotation, targetPitchRotation, lookSpeed * Time.deltaTime);
 
-        if(Input.GetKey(KeyCode.LeftAlt))
-        {
-            cameraTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, targetPitchRotation, lookSpeed * Time.deltaTime);
-        }
-        else
-        {
-            cameraTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, Quaternion.identity, lookSpeed * Time.deltaTime);
-            cameraRotationTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, targetPitchRotation, lookSpeed * Time.deltaTime);
-        }
+        //if(Input.GetKey(KeyCode.LeftAlt))
+        //{
+        //    cameraTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, targetPitchRotation, lookSpeed * Time.deltaTime);
+        //}
+        //else
+        //{
+        //    cameraTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, Quaternion.identity, lookSpeed * Time.deltaTime);
+        //    cameraRotationTransform.localRotation = Quaternion.Slerp(cameraTransform.localRotation, targetPitchRotation, lookSpeed * Time.deltaTime);
+        //}
     }
 }

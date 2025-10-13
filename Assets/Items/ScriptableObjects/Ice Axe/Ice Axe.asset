@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301bdea6d35830549b1bfe26178b3004, type: 3}
+  m_Name: Ice Axe
+  m_EditorClassIdentifier: 
+  itemName: Ice Axe
+  image: {fileID: 21300000, guid: 00b8746b414086948ac1a0687ddb8449, type: 3}
+  handlerPrefab: {fileID: 972761684973399169, guid: a4ab478ba666b9b4b84471b343a49b34, type: 3}
+  inHandModel: {fileID: 6684032890400572954, guid: f2b677b28e624f245bfce2a14f86e90c, type: 3}
+  stackable: 0
+  defaultData: 
+  maxInStack: 1
+  slotType: 0
+  damage: 0
+  haveDurability: 1
+  durability: 0
+  cooldownTime: 0
+  effectiveRange: 0
+  toolType: 0
