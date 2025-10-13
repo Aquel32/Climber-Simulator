@@ -6,11 +6,7 @@ using System.Linq;
 using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEditor;
-using UnityEditor.PackageManager;
 using UnityEngine;
-using UnityEngine.LightTransport;
-using static UnityEditor.Experimental.GraphView.GraphView;
-using static UnityEditor.ShaderData;
 
 public class TerrainMapGenerator : MonoBehaviour
 {
@@ -107,7 +103,7 @@ public class TerrainMapGenerator : MonoBehaviour
             Generate();
         }
 
-        if (!EditorApplication.isPlaying) return;
+        //if (!EditorApplication.isPlaying) return;
         if (debug_disablePathGeneration) return;
 
         Vector2Int[] path = FindPath();

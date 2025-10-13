@@ -1,15 +1,16 @@
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
+using UnityEngine.UIElements;
 
 public class PlayerMovement : MonoBehaviour
 {
-    // --- REQUIRED REFERENCES ---
     [Header("Required References")]
-    // The player object's Rigidbody component for custom gravity/snapping
     public Rigidbody playerRigidbody;
-    // The Player object's Transform for position, raycasting, and movement direction
     public Transform playerTransform;
+    public Transform playerCamera;
 
-    // --- Public Settings ---
+    public Animator playerAnimator;
+
     [Header("Movement Speeds (m/s)")]
     public float walkSpeed = 5.0f;
     public float iceAxeSpeed = 2.0f;
@@ -21,9 +22,9 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Ground Detection & Physics")]
     public float raycastDistance = 1.5f;
-    public float stickyForce = 50f; // Force to 'stick' to the ground/wall
+    public float stickyForce = 50f;
     public LayerMask groundLayer;
-    public float snapDistance = 0.2f; // Distance to snap the player down to the hit point
+    public float snapDistance = 0.2f;
 
     // --- Private Variables ---
     private Vector3 movementInput;
@@ -34,10 +35,13 @@ public class PlayerMovement : MonoBehaviour
     public MovementState currentState = MovementState.Airborne;
 
     // --- Unity Methods ---
+    [Header("Rigs")]
+    public TwoBoneIKConstraint leftHandRig;
+    public Transform leftHandRigTarget;
 
     void Awake()
     {
-        if (playerRigidbody == null || playerTransform == null)
+        if (playerRigidbody == null || playerTransform == null || playerAnimator == null)
         {
             Debug.LogError("Required Rigidbody/Transform references are missing! Disabling script.");
             enabled = false;
@@ -57,6 +61,9 @@ public class PlayerMovement : MonoBehaviour
         movementInput.x = Input.GetAxis("Horizontal");
         movementInput.z = Input.GetAxis("Vertical");
 
+        playerAnimator.SetFloat("horizontalInput", movementInput.x);
+        playerAnimator.SetFloat("verticalInput", movementInput.z);
+
         // Example trigger for Ragdoll state
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -66,14 +73,13 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        // 1. Check the ground angle and set the movement state
         CheckGroundAndSetState();
 
-        // 2. Apply Custom Forces (Gravity/Snap)
         ApplyCustomGravityAndSnap();
 
-        // 3. Handle Movement (Direct Transform Manipulation)
         HandleMovement();
+
+        HandleRigging();
     }
 
     // --- Core Logic Methods ---
@@ -129,6 +135,8 @@ public class PlayerMovement : MonoBehaviour
         {
             SetState(MovementState.Airborne);
         }
+
+        playerAnimator.SetBool("IsGrounded", currentState != MovementState.Airborne);
     }
 
     private void SetState(MovementState newState)
@@ -247,5 +255,38 @@ public class PlayerMovement : MonoBehaviour
 
             // NOTE: You would add logic here to disable child ragdoll Rigidbodies/Colliders
         }
+    }
+
+    public void HandleRigging()
+    {
+        //SHOES RIGID FOR VISUALS (remember about climbing)
+
+        //CAMERA SENDS RAYCAST
+        //WE SET LEFT HAND TARGET POSITION TO THAT RAYCAST HIT POSITION
+        //IF NO HIT HAND WEIGHT = 0
+
+        //IF HIT LESS MISTAKE CHANCE
+        //IF NOT (we re using ice axe) INCREASE MISTAKE CHANCE
+
+        RaycastHit hit;
+
+        if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, 1, groundLayer))
+        {
+            //surfaceNormal = hit.normal;
+            //float surfaceAngle = Vector3.Angle(surfaceNormal, Vector3.up);
+            //float distanceToGround = hit.distance - 0.1f;
+            leftHandRig.weight = 1;
+            leftHandRigTarget.position = hit.point;
+            //SHOW SNOW EFFECT ON ICE AXE
+            //SMOOTH CHANGE OF WEIGHT
+        }
+        else
+        {
+            leftHandRig.weight = 0;
+        }
+
+
+        //leftHandRig.gameObject.SetActive(currentState == MovementState.IceAxeSupport);
+        //leftHandRig.weight = currentState == MovementState.IceAxeSupport ? 1 : 0;
     }
 }

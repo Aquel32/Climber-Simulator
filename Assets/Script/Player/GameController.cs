@@ -4,7 +4,7 @@ public class GameController : MonoBehaviour
 {
     void Start()
     {
-        Application.targetFrameRate = 120;
+
     }
 
 }
