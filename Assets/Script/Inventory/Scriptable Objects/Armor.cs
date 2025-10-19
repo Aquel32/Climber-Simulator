@@ -7,5 +7,5 @@ public class Armor : Item
 {
     [Header("Armor")]
     public int durability;
-    public GameObject OnBodyPrefab;
+    public string[] modelObjectNames;
 }

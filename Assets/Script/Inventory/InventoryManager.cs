@@ -116,14 +116,14 @@ public class InventoryManager : MonoBehaviourPunCallbacks
 
             photonView.RPC("InstantiateItemInHandModelRPC", RpcTarget.AllBuffered, itemInHandModel.GetComponent<PhotonView>().ViewID, itemHolder.GetComponent<PhotonView>().ViewID);
 
-            itemInHandModel.transform.Find("Script").gameObject.SetActive(true);
-            if (itemInHandModel.transform.Find("Script").TryGetComponent(out IUsableItem usableItem))
+            if (itemInHandModel.transform.Find("Script") != null && itemInHandModel.transform.Find("Script").TryGetComponent(out IUsableItem usableItem))
             {
+                itemInHandModel.transform.Find("Script").gameObject.SetActive(true);
                 usableItem.Initialize(inventoryItem);
             }
 
             isThereSomethingInHand = true;
-            handBoneTarget.parent.GetComponent<TwoBoneIKConstraint>().weight = 1f;
+            //handBoneTarget.parent.GetComponent<TwoBoneIKConstraint>().weight = 1f;
         }
     }
 
@@ -143,7 +143,7 @@ public class InventoryManager : MonoBehaviourPunCallbacks
         {
             foreach (Transform child in itemHolder)
             {
-                if(child.gameObject.TryGetComponent<IUsableItem>(out IUsableItem item))
+                if(child.Find("Script") && child.Find("Script").TryGetComponent<IUsableItem>(out IUsableItem item))
                 {
                     item.Deinitialize();
                 }
@@ -152,7 +152,7 @@ public class InventoryManager : MonoBehaviourPunCallbacks
         }
 
         isThereSomethingInHand = false;
-        handBoneTarget.parent.GetComponent<TwoBoneIKConstraint>().weight = 0;
+        //handBoneTarget.parent.GetComponent<TwoBoneIKConstraint>().weight = 0;
     }
 
     public bool AddItem(Item item, string customData)

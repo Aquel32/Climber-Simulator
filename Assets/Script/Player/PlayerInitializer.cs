@@ -12,6 +12,7 @@ public class PlayerInitializer : MonoBehaviour
     [SerializeField] private Transform cameraRotationTransform;
     [SerializeField] private Transform itemHolder;
     [SerializeField] private Transform handTarget;
+    [SerializeField] private Transform model;
 
     [SerializeField] private List<SkinnedMeshRenderer> meshesToHide = new List<SkinnedMeshRenderer>();
 
@@ -43,5 +44,8 @@ public class PlayerInitializer : MonoBehaviour
         InventoryManager.Instance.itemHolder = itemHolder;
         InventoryManager.Instance.handBoneTarget = handTarget;
         InventoryManager.Instance.enabled = true;
+
+        ArmorSystem.Instance.model = model;
+        ArmorSystem.Instance.enabled = true;
     }
 }

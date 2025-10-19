@@ -3,14 +3,30 @@ using System.Collections.Generic;
 using Unity.VisualScripting.Antlr3.Runtime.Tree;
 using UnityEngine;
 
+public interface IGearScript
+{
+    public void Initialize();
+    public void Deinitialize();
+}
+
 public class ArmorSystem : MonoBehaviourPunCallbacks
 {
     public static ArmorSystem Instance;
-    public void Awake() { Instance = this; }
 
-    public List<InventorySlot> inventorySlots = new List<InventorySlot>();
+    public InventorySlot[] inventorySlots;
     public List<Armor> equipment = new List<Armor>();
-    [HideInInspector] public Transform headBone, chestBone, RightLegBone, LeftLegBone, RightFootBone, LeftFootBone;
+    public Transform model;
+    //[HideInInspector] public Transform headBone, chestBone, RightLegBone, LeftLegBone, RightFootBone, LeftFootBone;
+
+    public void Awake() { 
+        Instance = this; 
+
+        if(model == null)
+        {
+            enabled = false;
+        }
+    }
+
 
     private void Start()
     {
@@ -21,7 +37,7 @@ public class ArmorSystem : MonoBehaviourPunCallbacks
     {
         print("Looking for changes in equipment");
 
-        for (int i = 0; i < inventorySlots.Count; i++)
+        for (int i = 0; i < inventorySlots.Length; i++)
         {
             Armor tempArmor = equipment[i];
 
@@ -37,6 +53,32 @@ public class ArmorSystem : MonoBehaviourPunCallbacks
 
     public void UpdateEquipment(int index, Armor lastArmor)
     {
+        Armor armor = equipment[index] == null ? lastArmor : equipment[index];
+        bool newState = equipment[index] == null ? false : true;
+
+        for (int i = 0; i < armor.modelObjectNames.Length; i++)
+        {
+            model.Find(armor.modelObjectNames[i]).gameObject.SetActive(newState);
+        }
+
+        if (armor.modelObjectNames.Length == 0) return;
+        if (model.parent.Find("GearScripts").Find(armor.modelObjectNames[0]) == null) return;
+        model.parent.Find("GearScripts").Find(armor.modelObjectNames[0]).gameObject.SetActive(newState);
+        if (model.parent.Find("GearScripts").Find(armor.modelObjectNames[0]).TryGetComponent<IGearScript>(out IGearScript gearScript))
+        {
+            if(newState)
+            {
+                model.parent.Find("GearScripts").Find(armor.modelObjectNames[0]).gameObject.SetActive(true);
+                gearScript.Initialize();
+            }
+            else
+            {
+                gearScript.Deinitialize();
+                model.parent.Find("GearScripts").Find(armor.modelObjectNames[0]).gameObject.SetActive(false);
+            }
+        }
+
+
         //if (equipment[index] == null)
         //{
         //    GameObject toDestoy = null;

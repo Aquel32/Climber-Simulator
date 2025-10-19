@@ -12,7 +12,7 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
 
     public void Deinitialize()
     {
-
+        leftHandRig.weight = 0;
     }
 
     public void Initialize(InventoryItem newInventoryItem)
