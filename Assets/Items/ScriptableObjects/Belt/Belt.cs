@@ -1,9 +1,10 @@
+using Photon.Pun;
 using System.Collections.Generic;
 using System.Net;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
-public class Belt : MonoBehaviour, IGearScript
+public class Belt : MonoBehaviourPunCallbacks, IGearScript
 {
     public LayerMask ropeLayer;
 
@@ -12,7 +13,7 @@ public class Belt : MonoBehaviour, IGearScript
     private List<RopeGenerator> worldRopes = new List<RopeGenerator>();
     public RopeGenerator ropeGeneratorPrefab;
 
-    public int distance = 3;
+    public float distance = 1.5f;
     Vector3 lastPosition;
 
     public void Deinitialize()
@@ -29,20 +30,23 @@ public class Belt : MonoBehaviour, IGearScript
 
     public void DetachLast()
     {
-        GameObject temp = playerRopes[playerRopes.Count-1].gameObject;
-        playerRopes.RemoveAt(playerRopes.Count-1);
-        worldRopes.RemoveAt(worldRopes.Count-1);
-        Destroy(temp);
+        Detach(playerRopes.Count - 1);
     }
 
     public void Detach(RopeGenerator rope)
     {
         int index = worldRopes.IndexOf(rope);
 
+        Detach(index);
+    }
+
+    public void Detach(int index)
+    {
         GameObject temp = playerRopes[index].gameObject;
         playerRopes.RemoveAt(index);
         worldRopes.RemoveAt(index);
-        Destroy(temp);
+
+        PhotonNetwork.Destroy(temp);
     }
 
     public void Initialize()
@@ -64,8 +68,9 @@ public class Belt : MonoBehaviour, IGearScript
                 if(worldRopes.Contains(ropeGenerator) == false)
                 {
                     worldRopes.Add(ropeGenerator);
-                    playerRopes.Add(Instantiate(ropeGeneratorPrefab, transform.position, Quaternion.identity));
+                    playerRopes.Add(PhotonNetwork.Instantiate(ropeGeneratorPrefab.name, transform.position, Quaternion.identity).GetComponent<RopeGenerator>());
 
+                    playerRopes[playerRopes.Count - 1].enabled = true;
                     playerRopes[playerRopes.Count-1].startPoint = transform;
                 }
                 else
@@ -80,21 +85,31 @@ public class Belt : MonoBehaviour, IGearScript
         if (Input.GetKeyDown(KeyCode.O))
         {
             DetachLast();
-            return;
         }
+
+        float maxDistance = 0;
+        int index = 0;
 
         for (int i = 0; i < playerRopes.Count; i++)
         {
-            playerRopes[i].endPointVector = worldRopes[i].GetClosestPointOnRope(transform.position);
+            Vector3 onWorldRopePoint = worldRopes[i].GetClosestPointOnRope(transform.position);
+            playerRopes[i].endPointVector = onWorldRopePoint;
 
-            if (Vector3.Distance(transform.position, worldRopes[i].transform.position) > distance)
+            float thisDistance = Vector3.Distance(transform.position, onWorldRopePoint);
+            if (thisDistance > maxDistance)
             {
-                Player.myPlayer.playerObject.transform.position = lastPosition;
+                index = i;
+                maxDistance = thisDistance;
             }
-            else
-            {
-                lastPosition = Player.myPlayer.playerObject.transform.position;
-            }
+        }
+
+        if (maxDistance > distance)
+        {
+            Player.myPlayer.playerObject.transform.position = lastPosition;
+        }
+        else
+        {
+            lastPosition = Player.myPlayer.playerObject.transform.position;
         }
     }
 }

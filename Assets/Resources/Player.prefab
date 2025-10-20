@@ -663,7 +663,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   ropeGeneratorPrefab: {fileID: 5451783538054350627, guid: d68d35f8753b1d249ba718f76ec97b93, type: 3}
-  distance: 2
+  distance: 1.5
 --- !u!1 &5642358795011028316
 GameObject:
   m_ObjectHideFlags: 0

@@ -47,6 +47,7 @@ public class IceScrew : MonoBehaviourPunCallbacks, IUsableItem
 
             screwPlaceholder.transform.position = hit.point;
             screwPlaceholder.transform.rotation = rotation;
+            screwPlaceholder.GetComponent<Collider>().enabled = false;
 
             if (Input.GetKeyDown(KeyCode.Mouse0))
             {

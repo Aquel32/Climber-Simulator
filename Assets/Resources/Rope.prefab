@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 5712076593619450562}
   - component: {fileID: 2526980473661648114}
   - component: {fileID: 5451783538054350627}
+  - component: {fileID: -2299597103450264325}
+  - component: {fileID: -8497279131017379100}
   m_Layer: 7
   m_Name: Rope
   m_TagString: Untagged
@@ -116,12 +118,53 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8931365621135264165}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a1ae018a4960f9740bc9060586ae5805, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   startPoint: {fileID: 0}
+  startPointVector: {x: 0, y: 0, z: 0}
   endPoint: {fileID: 0}
+  endPointVector: {x: 0, y: 0, z: 0}
   ropeThickness: 0.05
   lengthAxis: 1
+--- !u!114 &-2299597103450264325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8931365621135264165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizePosition: 1
+  m_SynchronizeRotation: 1
+  m_SynchronizeScale: 1
+  m_UseLocal: 1
+--- !u!114 &-8497279131017379100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8931365621135264165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: -2299597103450264325}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0

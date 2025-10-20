@@ -66,7 +66,6 @@ public class RopeGenerator : MonoBehaviour
         // 4. Set Rotation
         // The rotation is calculated to point the object's specified axis along the direction vector.
 
-        Quaternion baseRotation = Quaternion.LookRotation(direction.normalized);
         Quaternion alignment = Quaternion.identity;
 
         // Apply a rotation offset to align the chosen axis with the calculated direction (Z-axis is default LookRotation).
@@ -86,6 +85,8 @@ public class RopeGenerator : MonoBehaviour
                 break;
         }
 
+        Quaternion baseRotation = Quaternion.LookRotation(direction.normalized);
+
         objectToStretch.rotation = baseRotation * alignment;
     }
 
@@ -96,36 +97,36 @@ public class RopeGenerator : MonoBehaviour
     /// <returns>The closest point on the rope segment.</returns>
     public Vector3 GetClosestPointOnRope(Vector3 worldPosition)
     {
-        if (startPoint == null || endPoint == null)
-        {
-            Debug.LogWarning("Cannot find closest point: Rope endpoints are not set.", this);
-            return worldPosition; // Return input position if endpoints are missing
-        }
+        // 1. Convert the target world position (P) into the LOCAL SPACE of the rope object.
+        // This allows us to work with simple, axis-aligned coordinates.
+        Vector3 P_local = this.transform.InverseTransformPoint(worldPosition);
 
-        Vector3 A = startPoint.position;
-        Vector3 B = endPoint.position;
-        Vector3 P = worldPosition;
+        // 2. Define the segment endpoints (A and B) in LOCAL SPACE.
+        // Since a standard Unity primitive is 1 unit long, the segment goes from -0.5 to +0.5.
+        // We assume the length axis is the local Y-axis based on the StretchObjectBetweenPoints logic.
+        Vector3 A_local = new Vector3(0, -0.5f, 0); // Bottom end of the segment
+        Vector3 B_local = new Vector3(0, 0.5f, 0);  // Top end of the segment
 
-        // Vector representing the line segment from A to B
-        Vector3 AB = B - A;
+        // 3. Vector representing the line segment from A to B (AB_local is always (0, 1, 0))
+        Vector3 AB_local = B_local - A_local;
 
-        // Vector from A to the point P
-        Vector3 AP = P - A;
+        // 4. Vector from A to the point P
+        Vector3 AP_local = P_local - A_local;
 
-        // Project vector AP onto vector AB.
-        // The dot product (AP . AB) gives us the scalar projection length.
-        // Dividing by (AB . AB) gives us 't', a normalized position along the line AB.
-        float t = Vector3.Dot(AP, AB) / Vector3.Dot(AB, AB);
+        // 5. Project vector AP onto vector AB to find the normalized position 't'.
+        // t = (AP_local . AB_local) / (AB_local . AB_local)
+        // Since AB_local.sqrMagnitude (denominator) is 1, t is simply the local y-position + 0.5.
+        float t = Vector3.Dot(AP_local, AB_local) / AB_local.sqrMagnitude;
 
-        // Clamp 't' between 0 and 1.
-        // If t < 0, the closest point is A.
-        // If t > 1, the closest point is B.
-        // Otherwise, it's somewhere between A and B on the line segment.
+        // 6. Clamp 't' between 0 and 1.
         t = Mathf.Clamp01(t);
 
-        // Calculate the closest point on the line segment
-        Vector3 closestPoint = A + t * AB;
+        // 7. Calculate the closest point in LOCAL SPACE.
+        Vector3 closestPoint_local = A_local + t * AB_local;
 
-        return closestPoint;
+        // 8. Convert the local closest point back to WORLD SPACE before returning.
+        Vector3 closestPoint_world = this.transform.TransformPoint(closestPoint_local);
+
+        return closestPoint_world;
     }
 }

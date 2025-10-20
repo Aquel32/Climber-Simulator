@@ -1,3 +1,4 @@
+using Photon.Pun;
 using UnityEngine;
 
 public class PlacedIceScrew : MonoBehaviour
@@ -7,8 +8,8 @@ public class PlacedIceScrew : MonoBehaviour
 
     public void AttachRope()
     {
-        generator = Instantiate(ropeGeneratorPrefab, transform.position, Quaternion.identity);
-
+        generator = PhotonNetwork.Instantiate(ropeGeneratorPrefab.gameObject.name, transform.position, Quaternion.identity).GetComponent<RopeGenerator>();
+        generator.enabled = true;
         ModifyAttachment(transform, Player.myPlayer.playerObject.transform);
     }
 
@@ -27,7 +28,7 @@ public class PlacedIceScrew : MonoBehaviour
     {
         GameObject temp = generator.gameObject;
 
-        Destroy(temp);
+        PhotonNetwork.Destroy(temp);
         generator = null;
     }
 }
