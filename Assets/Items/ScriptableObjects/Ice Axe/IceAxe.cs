@@ -14,7 +14,7 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
     {
         if (leftHandRig.weight == 1)
         {
-            FallSystem.Instance.IncreaseToolModifier(75);
+            FallSystem.Instance.IncreaseToolModifier(50);
         }
 
         leftHandRig.weight = 0;
@@ -35,7 +35,7 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
         {
             if (leftHandRig.weight == 0)
             {
-                FallSystem.Instance.DecreaseToolModifier(75);
+                FallSystem.Instance.DecreaseToolModifier(50);
             }
 
             //surfaceNormal = hit.normal;
@@ -46,13 +46,13 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
             //SHOW SNOW EFFECT ON ICE AXE
             //SMOOTH CHANGE OF WEIGHT
 
-            
+            FallSystem.Instance.TryArrest();
         }
         else
         {
             if (leftHandRig.weight == 1)
             {
-                FallSystem.Instance.IncreaseToolModifier(75);
+                FallSystem.Instance.IncreaseToolModifier(50);
             }
 
             leftHandRig.weight = 0;

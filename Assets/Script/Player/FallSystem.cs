@@ -15,6 +15,8 @@ public class FallSystem : MonoBehaviour
 
     public float customChance;
 
+    bool arresting = false;
+
     private void Awake()
     {
         baseChance = 0;
@@ -60,7 +62,7 @@ public class FallSystem : MonoBehaviour
 
     public void SetSteepnessModifier(float value)
     {
-        steepnessModifier = 1 + (value / 90);
+        steepnessModifier = 1 + (value / 90) * (value / 90);
     }
 
     public void SetHeightModifier(float value)
@@ -80,12 +82,30 @@ public class FallSystem : MonoBehaviour
                 print("POŒLIZGNIECIE");
                 PlayerMovement.Instance.SetRagdollState(true);
 
-                yield return new WaitForSeconds(Random.Range(1, 2) * steepnessModifier * heightModifier);
+                yield return new WaitForSeconds(Random.Range(1.5f, 2.5f) * steepnessModifier * heightModifier);
 
                 PlayerMovement.Instance.SetRagdollState(false);
             }
         }
 
+    }
+
+    public void TryArrest()
+    {
+        if (!PlayerMovement.Instance.IsRagdoll) return;
+        if (arresting) return;
+
+        StartCoroutine(Arrest());
+    }
+
+    IEnumerator Arrest()
+    {
+        arresting = true;
+
+        yield return new WaitForSeconds(Random.Range(.3f, .7f) * steepnessModifier * heightModifier);
+
+        PlayerMovement.Instance.SetRagdollState(false);
+        arresting = false;
     }
 
     bool TryToFall()

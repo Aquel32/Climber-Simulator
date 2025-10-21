@@ -29,6 +29,7 @@ public class PlayerMovement : MonoBehaviour
     public float stickyForce = 50f;
     public LayerMask groundLayer;
     public float snapDistance = 0.2f;
+    public float groundCheckRadius = 0.3f;
 
     // --- Private Variables ---
     private Vector3 movementInput;
@@ -40,6 +41,7 @@ public class PlayerMovement : MonoBehaviour
     public bool moving = false;
 
     bool ragdoll = false;
+    public bool IsRagdoll { get { return ragdoll; } }
 
     void Awake()
     {
@@ -110,7 +112,7 @@ public class PlayerMovement : MonoBehaviour
         Vector3 rayOrigin = playerTransform.position + Vector3.up * 0.1f;
         RaycastHit hit;
 
-        if (Physics.Raycast(rayOrigin, rayDirection, out hit, raycastDistance, groundLayer))
+        if (Physics.SphereCast(rayOrigin, groundCheckRadius, rayDirection, out hit, raycastDistance, groundLayer))
         {
             surfaceNormal = hit.normal;
             float surfaceAngle = Vector3.Angle(surfaceNormal, Vector3.up);
@@ -273,6 +275,8 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     public void SetRagdollState(bool isRagdoll)
     {
+        if (isRagdoll == ragdoll) return;
+
         ragdoll = isRagdoll;
 
         if (isRagdoll)

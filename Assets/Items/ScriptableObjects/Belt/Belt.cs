@@ -42,13 +42,16 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
 
     public void Detach(int index)
     {
-        FallSystem.Instance.IncreaseToolModifier(75);
-
         GameObject temp = playerRopes[index].gameObject;
         playerRopes.RemoveAt(index);
         worldRopes.RemoveAt(index);
 
         PhotonNetwork.Destroy(temp);
+
+        if(worldRopes.Count == 0)
+        {
+            FallSystem.Instance.IncreaseToolModifier(75);
+        }
     }
 
     public void Initialize()
@@ -69,13 +72,17 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
             {
                 if(worldRopes.Contains(ropeGenerator) == false)
                 {
+                    if(worldRopes.Count == 0)
+                    {
+                        FallSystem.Instance.DecreaseToolModifier(75);
+                    }
+
                     worldRopes.Add(ropeGenerator);
                     playerRopes.Add(PhotonNetwork.Instantiate(ropeGeneratorPrefab.name, transform.position, Quaternion.identity).GetComponent<RopeGenerator>());
 
                     playerRopes[playerRopes.Count - 1].enabled = true;
                     playerRopes[playerRopes.Count-1].startPoint = transform;
 
-                    FallSystem.Instance.DecreaseToolModifier(75);
                 }
                 else
                 {
@@ -110,6 +117,8 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
         if (maxDistance > distance)
         {
             Player.myPlayer.playerObject.transform.position = lastPosition;
+
+            PlayerMovement.Instance.SetRagdollState(false);
         }
         else
         {
