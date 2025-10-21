@@ -35,8 +35,11 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 surfaceNormal = Vector3.up;
 
     // --- State Enumerator ---
-    public enum MovementState { Walking, IceAxeSupport, Climbing, Airborne, Ragdoll }
+    public enum MovementState { Walking = 1, IceAxeSupport = 2, Climbing = 10, Airborne = 0, Ragdoll = 100}
     public MovementState currentState = MovementState.Airborne;
+    public bool moving = false;
+
+    bool ragdoll = false;
 
     void Awake()
     {
@@ -57,8 +60,6 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (currentState == MovementState.Ragdoll) return;
-
         movementInput.x = Input.GetAxis("Horizontal");
         movementInput.z = Input.GetAxis("Vertical");
 
@@ -68,7 +69,7 @@ public class PlayerMovement : MonoBehaviour
         // Example trigger for Ragdoll state
         if (Input.GetKeyDown(KeyCode.R))
         {
-            SetRagdollState(true);
+            SetRagdollState(!ragdoll);
         }
     }
 
@@ -87,6 +88,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckGroundAndSetState()
     {
+        if (currentState == MovementState.Ragdoll)
+        {
+            playerAnimator.SetBool("IsGrounded", false);
+            return;
+        }
+
         Vector3 rayDirection;
         float currentAngle = Vector3.Angle(surfaceNormal, Vector3.up);
 
@@ -110,6 +117,9 @@ public class PlayerMovement : MonoBehaviour
 
             // Store the distance to the ground for the snap logic
             float distanceToGround = hit.distance - 0.1f; // Account for ray origin offset
+
+            FallSystem.Instance.SetSteepnessModifier(surfaceAngle);
+            FallSystem.Instance.SetHeightModifier(playerTransform.position.y);
 
             // 4. State Update Logic
             if (surfaceAngle < walkMaxAngle)
@@ -144,13 +154,26 @@ public class PlayerMovement : MonoBehaviour
     {
         if (currentState != newState)
         {
+            if (currentState == MovementState.Ragdoll && newState != MovementState.Airborne)
+            {
+                // Only allow ragdoll to be exited by the SetRagdollState(false) method
+                // which sets the state to Airborne.
+                return;
+            }
+
             currentState = newState;
+            FallSystem.Instance.SetBaseChance((int)newState);
             Debug.Log($"State changed to: {currentState}");
         }
     }
 
     private void ApplyCustomGravityAndSnap()
     {
+        if (currentState == MovementState.Ragdoll)
+        {
+            return; // Do not apply sticky force when ragdolled
+        }
+
         // Only apply extra force when grounded to ensure the player sticks/snaps
         if (currentState != MovementState.Airborne)
         {
@@ -175,17 +198,31 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleMovement()
     {
+        if (currentState == MovementState.Ragdoll)
+        {
+            moving = false;
+            return; // Do not apply scripted movement when ragdolled
+        }
+
+        moving = false;
+
         if (!canMove) return;
 
+        // Preserve vertical velocity when stopping horizontal input
         if (movementInput.magnitude < 0.1f)
         {
-            // Stop horizontal Rigidbody velocity immediately when input is released
-            // (We keep the Y velocity for gravity/falling)
+            // Stop horizontal Rigidbody velocity, but RETAIN the vertical velocity (gravity/falling).
             playerRigidbody.linearVelocity = new Vector3(0, playerRigidbody.linearVelocity.y, 0);
-            return;
+        
+            // Only return if we're not airborne (allowing an airborne player with zero input to fall).
+            if (currentState != MovementState.Airborne)
+            {
+                 return;
+            }
         }
 
         float currentSpeed;
+        bool usesMovePosition = true;
 
         switch (currentState)
         {
@@ -197,11 +234,12 @@ public class PlayerMovement : MonoBehaviour
                 break;
             case MovementState.Climbing:
                 currentSpeed = climbingSpeed;
-
                 // CRITICAL FOR CLIMBING: Disable Rigidbody velocity entirely for clean movement.
                 playerRigidbody.linearVelocity = Vector3.zero;
+                usesMovePosition = true; // Still use MovePosition for explicit wall crawling
                 break;
             default:
+                // Airborne state relies entirely on gravity, so we exit.
                 return;
         }
 
@@ -213,50 +251,67 @@ public class PlayerMovement : MonoBehaviour
         // 2. Project the direction onto the plane defined by the surface normal
         Vector3 moveDirection = Vector3.ProjectOnPlane(desiredInput, surfaceNormal).normalized;
 
-        // 3. Move the player's position directly (Kinematic/Teleport)
-        Vector3 deltaPosition = moveDirection * currentSpeed * Time.fixedDeltaTime;
+        // 3. Calculate the horizontal movement only
+        Vector3 horizontalDelta = moveDirection * currentSpeed * Time.fixedDeltaTime;
 
-        // Use MovePosition for Rigidbody-based smooth movement (important for collision)
-        playerRigidbody.MovePosition(playerTransform.position + deltaPosition);
+        if (usesMovePosition)
+        {
+            // When using MovePosition, we must manually include the Y movement 
+            // generated by gravity (playerRigidbody.linearVelocity.y).
+            Vector3 verticalDelta = Vector3.up * playerRigidbody.linearVelocity.y * Time.fixedDeltaTime;
+        
+            // Use the combined horizontal and vertical movement for the next position
+            playerRigidbody.MovePosition(playerTransform.position + horizontalDelta + verticalDelta);
+        } 
+        // If you were to switch to AddForce for Walking/IceAxe, you'd use that here instead.
+
+        if(movementInput.magnitude > 0) moving = true;
     }
 
     /// <summary>
     /// Sets the player's state to Ragdoll or restores control.
     /// </summary>
-    /// <param name="isRagdoll">True to enable ragdoll physics, False to resume control.</param>
     public void SetRagdollState(bool isRagdoll)
     {
+        ragdoll = isRagdoll;
+
         if (isRagdoll)
         {
             SetState(MovementState.Ragdoll);
 
-            // --- PHYSICS CONTROL HANDOVER ---
+            // --- 1. APPLY IMPULSE FORCE ---
+            Vector3 pushDirection = surfaceNormal.normalized;
+            float pushMagnitude = 1f;
+            Vector3 force = (pushDirection * pushMagnitude) + (Vector3.down * pushMagnitude * 0.5f);
 
-       
-            // 2. Enable full Rigidbody physics control for falling/ragdoll
+            // --- CORRECTION: Set to NON-KINEMATIC and allow rotation ---
             playerRigidbody.isKinematic = false;
+            playerRigidbody.freezeRotation = false; // Allow tumbling
 
-            // 3. Allow physics to rotate the main body
-            playerRigidbody.freezeRotation = false;
-
-            // NOTE: You still need separate logic to enable the child ragdoll Rigidbodies/Colliders 
-            // and disable the main animation script, as the main Rigidbody alone won't look like a ragdoll.
-        }
-        else
-        {
-            // Reset to Airborne state (will transition to Walking/Climbing on next FixedUpdate)
-            SetState(MovementState.Airborne);
-
-            // --- RESTORE SCRIPT CONTROL ---
-
-
-            // 2. Restore scripted control parameters
-            playerRigidbody.isKinematic = false; // Ensure it's not kinematic for our movement
-            playerRigidbody.freezeRotation = true; // Lock rotation for player control
+            // Clear existing velocity
             playerRigidbody.linearVelocity = Vector3.zero;
             playerRigidbody.angularVelocity = Vector3.zero;
 
-            // NOTE: You would add logic here to disable child ragdoll Rigidbodies/Colliders
+            playerRigidbody.AddForce(force, ForceMode.Impulse);
+
+            // --- 2. HANDOVER CONTROL ---
+            // --- CORRECTION: DO NOT SET isKinematic = true ---
+            // By leaving it 'false', the Rigidbody will now be controlled
+            // by Unity's physics, including standard gravity, and "fall freely".
+        }
+        else
+        {
+            // --- RESTORE SCRIPT CONTROL ---
+            SetState(MovementState.Airborne); // Reset state
+
+            // Restore scripted control parameters
+            playerRigidbody.isKinematic = false; // Script assumes non-kinematic
+            playerRigidbody.freezeRotation = true; // Stop tumbling
+            playerRigidbody.linearVelocity = Vector3.zero;
+            playerRigidbody.angularVelocity = Vector3.zero;
+
+            // The 'CheckGroundAndSetState' function will take over on the
+            // next FixedUpdate and find the ground if available.
         }
     }
 

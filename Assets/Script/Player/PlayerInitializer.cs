@@ -47,5 +47,7 @@ public class PlayerInitializer : MonoBehaviour
 
         ArmorSystem.Instance.model = model;
         ArmorSystem.Instance.enabled = true;
+
+        FallSystem.Instance.enabled = true;
     }
 }

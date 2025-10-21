@@ -42,6 +42,8 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
 
     public void Detach(int index)
     {
+        FallSystem.Instance.IncreaseToolModifier(75);
+
         GameObject temp = playerRopes[index].gameObject;
         playerRopes.RemoveAt(index);
         worldRopes.RemoveAt(index);
@@ -63,7 +65,7 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
 
         if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, 2, ropeLayer) && hit.collider.TryGetComponent<RopeGenerator>(out RopeGenerator ropeGenerator))
         {
-            if (Input.GetKeyDown(KeyCode.Mouse0) && playerRopes.Contains(ropeGenerator) == false)
+            if (Input.GetKeyDown(KeyCode.E) && playerRopes.Contains(ropeGenerator) == false)
             {
                 if(worldRopes.Contains(ropeGenerator) == false)
                 {
@@ -72,6 +74,8 @@ public class Belt : MonoBehaviourPunCallbacks, IGearScript
 
                     playerRopes[playerRopes.Count - 1].enabled = true;
                     playerRopes[playerRopes.Count-1].startPoint = transform;
+
+                    FallSystem.Instance.DecreaseToolModifier(75);
                 }
                 else
                 {

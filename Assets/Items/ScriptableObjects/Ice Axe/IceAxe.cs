@@ -12,6 +12,11 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
 
     public void Deinitialize()
     {
+        if (leftHandRig.weight == 1)
+        {
+            FallSystem.Instance.IncreaseToolModifier(75);
+        }
+
         leftHandRig.weight = 0;
     }
 
@@ -28,6 +33,11 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
 
         if (Physics.Raycast(playerCamera.position, playerCamera.forward, out hit, 1, groundLayer))
         {
+            if (leftHandRig.weight == 0)
+            {
+                FallSystem.Instance.DecreaseToolModifier(75);
+            }
+
             //surfaceNormal = hit.normal;
             //float surfaceAngle = Vector3.Angle(surfaceNormal, Vector3.up);
             //float distanceToGround = hit.distance - 0.1f;
@@ -35,9 +45,16 @@ public class IceAxe : MonoBehaviourPunCallbacks, IUsableItem
             leftHandRigTarget.position = hit.point;
             //SHOW SNOW EFFECT ON ICE AXE
             //SMOOTH CHANGE OF WEIGHT
+
+            
         }
         else
         {
+            if (leftHandRig.weight == 1)
+            {
+                FallSystem.Instance.IncreaseToolModifier(75);
+            }
+
             leftHandRig.weight = 0;
         }
     }

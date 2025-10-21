@@ -2053,12 +2053,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 571928622}
+  - component: {fileID: 571928626}
   - component: {fileID: 571928621}
   - component: {fileID: 571928623}
   - component: {fileID: 571928625}
   - component: {fileID: 571928624}
-  - component: {fileID: 571928626}
   - component: {fileID: 571928627}
+  - component: {fileID: 571928628}
   m_Layer: 0
   m_Name: Player Scripts
   m_TagString: Untagged
@@ -2129,7 +2130,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   snapDistance: 0.2
-  currentState: 3
+  currentState: 1
+  moving: 0
 --- !u!114 &571928624
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2232,6 +2234,19 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   model: {fileID: 0}
+--- !u!114 &571928628
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 571928620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d980d35250c49d46aab10919d164d89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  customChance: 0
 --- !u!1001 &622715187
 PrefabInstance:
   m_ObjectHideFlags: 0
