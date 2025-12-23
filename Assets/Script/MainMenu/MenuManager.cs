@@ -28,7 +28,7 @@ public class MenuManager : MonoBehaviourPunCallbacks
     public void StartButton()
     {
         PhotonNetwork.NickName = nickInputField.text;
-
+        
         print("Connecting to server.");
         PhotonNetwork.ConnectUsingSettings();
     }

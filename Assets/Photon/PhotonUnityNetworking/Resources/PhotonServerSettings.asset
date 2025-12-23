@@ -19,7 +19,7 @@ MonoBehaviour:
     AppIdVoice: 886c17f4-4f23-485b-a27e-ea7dd36c632b
     AppVersion: 
     UseNameServer: 1
-    FixedRegion: 
+    FixedRegion: eu
     Server: 
     Port: 0
     ProxyServer: 
@@ -49,6 +49,7 @@ MonoBehaviour:
   - SetBoneTargetWeightRPC
   - SpawnNewItemHandler
   - DisplayModelRPC
+  - UpdateTimeOfDayRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1
