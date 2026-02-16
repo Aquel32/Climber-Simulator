@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d806fabfd126750438c08c12c039e5ae, type: 3}
+  m_Name: Headlamp
+  m_EditorClassIdentifier: 
+  itemName: Headlamp
+  image: {fileID: 21300000, guid: f4d6835105217194986681fb901a677c, type: 3}
+  handlerPrefab: {fileID: 6502791664442942105, guid: 5310e7232adeede4e893a76e451c4768, type: 3}
+  inHandModel: {fileID: 6135635592114789627, guid: adf896c613bfbcd419d5b4ad18e2b1b8, type: 3}
+  stackable: 0
+  defaultData: 
+  maxInStack: 1
+  slotType: 2
+  durability: 0
+  modelObjectNames:
+  - Headlamp
