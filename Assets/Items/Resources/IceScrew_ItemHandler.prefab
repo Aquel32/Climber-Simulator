@@ -72,6 +72,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 11400000, guid: 4b3e9fd9f98614749be3153d34e405e8, type: 2}
   customData: 
+  destroyAfterInteraction: 1
 --- !u!65 &3687312396108136121
 BoxCollider:
   m_ObjectHideFlags: 0

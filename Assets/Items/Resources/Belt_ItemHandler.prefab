@@ -179,6 +179,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 11400000, guid: 444743f5adddeed4488b6b16e4e2a9ee, type: 2}
   customData: 
+  destroyAfterInteraction: 1
 --- !u!54 &1272612476514087580
 Rigidbody:
   m_ObjectHideFlags: 0

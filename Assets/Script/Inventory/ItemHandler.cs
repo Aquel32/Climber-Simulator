@@ -9,11 +9,16 @@ public class ItemHandler : MonoBehaviourPunCallbacks, IInteractible
     public Item item;
     public string customData;
 
+    public bool destroyAfterInteraction = true;
+
     public void Interact()
     {
         if(InventoryManager.Instance.AddItem(item, customData) == true)
         {
-            photonView.RPC("DestroyHandlerObjectRPC", RpcTarget.AllBuffered);
+            if (destroyAfterInteraction == true)
+            {
+                photonView.RPC("DestroyHandlerObjectRPC", RpcTarget.AllBuffered);
+            }
         }
     }
 

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Rope
   m_EditorClassIdentifier: 
   itemName: Rope
-  image: {fileID: 21300000, guid: c7b71827fd1d06c4fa422e16c6061a4c, type: 3}
+  image: {fileID: 21300000, guid: b348906ee92696e438927b4190bcb2d8, type: 3}
   handlerPrefab: {fileID: 7631661605136767466, guid: 886bea5b30205a847b116398cc987686, type: 3}
   inHandModel: {fileID: 3451834951579511853, guid: 6b9ec986dd685d24d83b7b76604804e7, type: 3}
   stackable: 0

@@ -24,7 +24,7 @@ public class InventoryItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEn
 
     void Start()
     {
-        whileDraggingParent = transform.parent.parent.parent;
+        whileDraggingParent = transform.parent.parent.parent.parent;
         parentBeforeDrag = transform.parent;
     }
 
