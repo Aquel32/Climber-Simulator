@@ -5537,7 +5537,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -7619,9 +7619,25 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 583388648799918659, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
+      propertyPath: m_CastShadows
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 583388648799918659, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
+      propertyPath: m_MotionVectors
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 583388648799918659, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
+      propertyPath: m_StaticShadowCaster
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5019884919613040775, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
       propertyPath: m_Name
       value: BigTent
+      objectReference: {fileID: 0}
+    - target: {fileID: 8024331386861769894, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8244674854800945176, guid: d450e0144ed5d224f9cc807fce719700, type: 3}
       propertyPath: m_LocalPosition.x
